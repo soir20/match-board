@@ -1,21 +1,21 @@
 use enumset::EnumSet;
 
 #[derive(Hash, Eq, PartialEq)]
-struct Pos {
+pub struct Pos {
     x: u32,
     y: u32
 }
 
-struct MatchPattern {
+pub struct MatchPattern {
     spaces: Vec<Pos>
 }
 
-struct PieceType {
+pub struct PieceType {
     name: String,
     pattern: MatchPattern
 }
 
-enum Direction {
+pub enum Direction {
     North,
     South,
     East,
@@ -26,7 +26,7 @@ const ALL_DIRECTIONS: EnumSet<Direction> = enum_set!(
 );
 
 
-struct Piece {
+pub struct Piece {
     piece_type: PieceType,
     movable_directions: EnumSet<Direction>
 }

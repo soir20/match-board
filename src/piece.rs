@@ -1,4 +1,6 @@
+use enumset::enum_set;
 use enumset::EnumSet;
+use enumset::EnumSetType;
 
 #[derive(Hash, Eq, PartialEq)]
 pub struct Pos {
@@ -15,6 +17,7 @@ pub struct PieceType {
     pattern: MatchPattern
 }
 
+#[derive(EnumSetType)]
 pub enum Direction {
     North,
     South,

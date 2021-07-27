@@ -52,7 +52,7 @@ impl Piece {
     }
 
     pub fn make_unmovable_all(&mut self) {
-        self.movable_directions = EnumSet::new();
+        self.movable_directions.clear();
     }
 
     pub fn is_movable(&self, direction: Direction) -> bool {

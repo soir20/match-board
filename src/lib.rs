@@ -62,6 +62,11 @@ impl Board {
         self.pieces.get(&pos)
     }
 
+    pub fn set_piece(&mut self, pos: Pos, piece: Piece) -> Option<Piece> {
+        self.last_changed.push_back(pos);
+        self.pieces.insert(pos, piece)
+    }
+
     pub fn next_match(&mut self) -> Option<Match> {
         let next_pos = self.last_changed.pop_front()?;
         self.patterns.iter().find_map(|pattern| {

@@ -46,7 +46,7 @@ impl MatchPattern {
     }
 }
 
-struct Match<'a> {
+pub struct Match<'a> {
     pattern: &'a MatchPattern,
     positions: Vec<Pos>
 }
@@ -64,12 +64,10 @@ impl Board {
 
     pub fn next_match(&mut self) -> Option<Match> {
         let next_pos = self.last_changed.pop_front()?;
-        self.patterns.iter().find_map(
-            |pattern| match pattern.find_match(self, next_pos) {
-                None => None,
-                Some(positions) => Some(Match { pattern, positions })
-            }
-        )
+        self.patterns.iter().find_map(|pattern| {
+            let positions = pattern.find_match(self, next_pos)?;
+            Some(Match { pattern, positions })
+        })
     }
 }
 

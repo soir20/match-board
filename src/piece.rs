@@ -2,19 +2,9 @@ use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
 
-#[derive(Hash, Eq, PartialEq)]
-pub struct Pos {
-    x: u32,
-    y: u32
-}
-
-pub struct MatchPattern {
-    spaces: Vec<Pos>
-}
-
+#[derive(Eq, PartialEq)]
 pub struct PieceType {
-    name: String,
-    pattern: MatchPattern
+    name: String
 }
 
 #[derive(EnumSetType)]
@@ -27,7 +17,6 @@ pub enum Direction {
 const ALL_DIRECTIONS: EnumSet<Direction> = enum_set!(
     Direction::North | Direction::South | Direction::East | Direction::West
 );
-
 
 pub struct Piece {
     piece_type: PieceType,
@@ -57,5 +46,9 @@ impl Piece {
 
     pub fn is_movable(&self, direction: Direction) -> bool {
         self.movable_directions.contains(direction)
+    }
+
+    pub fn get_type(&self) -> &PieceType {
+        &self.piece_type
     }
 }

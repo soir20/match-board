@@ -1,17 +1,80 @@
 mod piece;
 
-use std::collections::HashMap;
-use enumset::EnumSet;
-use crate::piece::{Piece, Pos};
+use std::collections::{HashMap, VecDeque};
+use crate::piece::{Piece, PieceType};
+use std::rc::Rc;
+use std::ops::{Add, Sub};
 
 struct Game {
     score: u64
 }
 
-struct Board {
-    h_size: u32,
-    v_size: u32,
-    pieces: HashMap<Pos, Piece>
+pub struct MatchPattern {
+    spaces: HashMap<Pos, PieceType>
+}
+
+impl MatchPattern {
+    pub fn find_match(&self, board: &Board, pos: Pos) -> Option<Vec<Pos>> {
+        self.spaces.keys().into_iter().find(|&&original| {
+            self.check_variant_match(board, pos - original)
+        });
+
+        Option::None
+    }
+
+    fn check_variant_match(&self, board: &Board, new_origin: Pos) -> bool {
+        let original_to_board_pos = self.change_origin(new_origin);
+        original_to_board_pos.iter().all(|(original_pos, board_pos)|
+            match board.get_piece(*board_pos) {
+                None => false,
+                Some(piece) => piece.get_type() == self.spaces.get(original_pos)
+                    .expect("Known piece wasn't found in pattern!")
+            }
+        )
+    }
+
+    fn change_origin(&self, origin: Pos) -> Vec<(Pos, Pos)> {
+        let mut original_positions: Vec<Pos> = self.spaces.keys().map(|&pos| pos).collect();
+        let mut changed_positions: Vec<Pos> = original_positions.iter().map(
+            |&original| original + origin
+        ).collect();
+
+        original_positions.drain(..).zip(changed_positions.drain(..)).collect()
+    }
+}
+
+pub struct Board {
+    patterns: Vec<MatchPattern>,
+    pieces: HashMap<Pos, Piece>,
+    last_changed: VecDeque<Pos>
+}
+
+impl Board {
+    pub fn get_piece(&self, pos: Pos) -> Option<&Piece> {
+        self.pieces.get(&pos)
+    }
+}
+
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+pub struct Pos {
+    x: i32,
+    y: i32
+}
+
+impl Add for Pos {
+    type Output = Pos;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Pos {x: self.x + rhs.x, y: self.y + rhs.y}
+    }
+}
+
+impl Sub for Pos {
+    type Output = Pos;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Pos {x: self.x - rhs.x, y: self.y - rhs.y}
+    }
 }
 
 #[cfg(test)]

@@ -2,7 +2,6 @@ mod piece;
 
 use std::collections::{HashMap, VecDeque};
 use crate::piece::{Piece, PieceType};
-use std::rc::Rc;
 use std::ops::{Add, Sub};
 
 struct Game {
@@ -10,7 +9,8 @@ struct Game {
 }
 
 pub struct MatchPattern {
-    spaces: HashMap<Pos, PieceType>
+    spaces: HashMap<Pos, PieceType>,
+    rank: u32
 }
 
 impl MatchPattern {
@@ -46,6 +46,11 @@ impl MatchPattern {
     }
 }
 
+struct Match<'a> {
+    pattern: &'a MatchPattern,
+    positions: Vec<Pos>
+}
+
 pub struct Board {
     patterns: Vec<MatchPattern>,
     pieces: HashMap<Pos, Piece>,
@@ -55,6 +60,16 @@ pub struct Board {
 impl Board {
     pub fn get_piece(&self, pos: Pos) -> Option<&Piece> {
         self.pieces.get(&pos)
+    }
+
+    pub fn next_match(&mut self) -> Option<Match> {
+        let next_pos = self.last_changed.pop_front()?;
+        self.patterns.iter().find_map(
+            |pattern| match pattern.find_match(self, next_pos) {
+                None => None,
+                Some(positions) => Some(Match { pattern, positions })
+            }
+        )
     }
 }
 

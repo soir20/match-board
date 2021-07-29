@@ -68,11 +68,18 @@ impl Board {
     }
 
     pub fn next_match(&mut self) -> Option<Match> {
-        let next_pos = self.last_changed.pop_front()?;
-        self.patterns.iter().find_map(|pattern| {
-            let positions = pattern.find_match(self, next_pos)?;
-            Some(Match { pattern, positions })
-        })
+        let mut next_pos;
+        let mut next_match = None;
+
+        while next_match.is_none() {
+            next_pos = self.last_changed.pop_front()?;
+            next_match = self.patterns.iter().find_map(|pattern| {
+                let positions = pattern.find_match(self, next_pos)?;
+                Some(Match { pattern, positions })
+            });
+        }
+
+        next_match
     }
 }
 

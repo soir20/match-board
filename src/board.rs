@@ -1,7 +1,28 @@
-use crate::matching::{MatchPattern, Match};
 use std::collections::{HashMap, VecDeque};
-use crate::piece::Piece;
+use crate::piece::{Piece, PieceType};
 use std::ops::{Add, Sub};
+
+#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+pub struct Pos {
+    pub x: i32,
+    pub y: i32
+}
+
+impl Add for Pos {
+    type Output = Pos;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Pos {x: self.x + rhs.x, y: self.y + rhs.y}
+    }
+}
+
+impl Sub for Pos {
+    type Output = Pos;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Pos {x: self.x - rhs.x, y: self.y - rhs.y}
+    }
+}
 
 pub struct Board {
     patterns: Vec<MatchPattern>,
@@ -35,24 +56,45 @@ impl Board {
     }
 }
 
-#[derive(Hash, Eq, PartialEq, Copy, Clone)]
-pub struct Pos {
-    pub x: i32,
-    pub y: i32
+pub struct MatchPattern {
+    spaces: HashMap<Pos, PieceType>,
+    rank: u32
 }
 
-impl Add for Pos {
-    type Output = Pos;
+impl MatchPattern {
+    fn find_match(&self, board: &Board, pos: Pos) -> Option<Vec<Pos>> {
+        self.spaces.keys().into_iter().find_map(|&original|
+            self.check_variant_match(board, pos - original)
+        )
+    }
 
-    fn add(self, rhs: Self) -> Self::Output {
-        Pos {x: self.x + rhs.x, y: self.y + rhs.y}
+    fn check_variant_match(&self, board: &Board, new_origin: Pos) -> Option<Vec<Pos>> {
+        let mut original_to_board_pos = self.change_origin(new_origin);
+        let is_match = original_to_board_pos.iter().all(|(original_pos, board_pos)|
+            match board.get_piece(*board_pos) {
+                None => false,
+                Some(piece) => piece.get_type() == self.spaces.get(original_pos)
+                    .expect("Known piece wasn't found in pattern!")
+            }
+        );
+
+        match is_match {
+            true => Some(original_to_board_pos.drain(..).map(|(_, board)| board).collect()),
+            false => None
+        }
+    }
+
+    fn change_origin(&self, origin: Pos) -> Vec<(Pos, Pos)> {
+        let mut original_positions: Vec<Pos> = self.spaces.keys().map(|&pos| pos).collect();
+        let mut changed_positions: Vec<Pos> = original_positions.iter().map(
+            |&original| original + origin
+        ).collect();
+
+        original_positions.drain(..).zip(changed_positions.drain(..)).collect()
     }
 }
 
-impl Sub for Pos {
-    type Output = Pos;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Pos {x: self.x - rhs.x, y: self.y - rhs.y}
-    }
+pub struct Match<'a> {
+    pub pattern: &'a MatchPattern,
+    pub positions: Vec<Pos>
 }

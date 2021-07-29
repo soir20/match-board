@@ -1,6 +1,5 @@
 pub mod piece;
 pub mod board;
-pub mod matching;
 
 struct Game {
     score: u64

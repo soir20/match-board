@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use crate::piece::{Piece, PieceType};
+use crate::piece::{Piece, PieceType, Direction};
 use std::ops::{Add, Sub};
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
@@ -26,13 +26,15 @@ impl Sub for Pos {
 
 pub struct Board {
     patterns: Vec<MatchPattern>,
-    swap_rules: Vec<Box<dyn Fn(Pos, Pos) -> bool>>,
+    swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>,
     pieces: HashMap<Pos, Piece>,
     last_changed: VecDeque<Pos>
 }
 
 impl Board {
-    pub fn new(patterns: Vec<MatchPattern>, swap_rules: Vec<Box<dyn Fn(Pos, Pos) -> bool>>) -> Board {
+    pub fn new(patterns: Vec<MatchPattern>,
+               mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
+        swap_rules.insert(0, Box::from(are_pieces_movable));
         Board { patterns, swap_rules, pieces: HashMap::new(), last_changed: VecDeque::new() }
     }
 
@@ -42,7 +44,7 @@ impl Board {
 
     #[must_use]
     pub fn swap_pieces(&mut self, first: Pos, second: Pos) -> bool {
-        if !self.swap_rules.iter().all(|rule| rule(first, second)) {
+        if !self.swap_rules.iter().all(|rule| rule(self, first, second)) {
             return false;
         }
 
@@ -79,6 +81,46 @@ impl Board {
 
         next_match
     }
+}
+
+fn are_pieces_movable(board: &Board, first: Pos, second: Pos) -> bool {
+    let is_first_movable = match board.get_piece(first) {
+        None => true,
+        Some(piece) => is_movable(first, second, piece)
+    };
+
+    let is_second_movable = match board.get_piece(second) {
+        None => true,
+        Some(piece) => is_movable(second, first, piece)
+    };
+
+    is_first_movable && is_second_movable
+}
+
+fn is_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
+    is_vertically_movable(from, to, piece) && is_horizontally_movable(from, to, piece)
+}
+
+fn is_vertically_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
+    let vertical_change = to.y - from.y;
+    if vertical_change > 0 {
+        return piece.is_movable(Direction::North);
+    } else if vertical_change < 0 {
+        return piece.is_movable(Direction::South);
+    }
+
+    true
+}
+
+fn is_horizontally_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
+    let horizontal_change = to.x - from.x;
+    if horizontal_change > 0 {
+        return piece.is_movable(Direction::East);
+    } else if horizontal_change < 0 {
+        return piece.is_movable(Direction::West);
+    }
+
+    true
 }
 
 pub struct MatchPattern {

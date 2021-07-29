@@ -1,8 +1,9 @@
 use std::collections::{HashMap, VecDeque};
 use crate::piece::{Piece, PieceType, Direction};
 use std::ops::{Add, Sub};
+use std::fmt::{Display, Formatter};
 
-#[derive(Hash, Eq, PartialEq, Copy, Clone)]
+#[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
 pub struct Pos {
     pub x: i32,
     pub y: i32
@@ -21,6 +22,12 @@ impl Sub for Pos {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Pos {x: self.x - rhs.x, y: self.y - rhs.y}
+    }
+}
+
+impl Display for Pos {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "({}, {})", self.x, self.y)
     }
 }
 
@@ -75,7 +82,7 @@ impl Board {
             next_pos = self.last_changed.pop_front()?;
             next_match = self.patterns.iter().find_map(|pattern| {
                 let positions = pattern.find_match(self, next_pos)?;
-                Some(Match { pattern, positions })
+                Some(Match { pattern, changed_pos: next_pos, pattern_to_board_pos: positions })
             });
         }
 
@@ -136,7 +143,7 @@ impl MatchPattern {
     }
 
     fn check_variant_match(&self, board: &Board, new_origin: Pos) -> Option<HashMap<Pos, Pos>> {
-        let mut original_to_board_pos = self.change_origin(new_origin);
+        let original_to_board_pos = self.change_origin(new_origin);
         let is_match = original_to_board_pos.iter().all(|(original_pos, board_pos)|
             match board.get_piece(*board_pos) {
                 None => false,
@@ -163,5 +170,14 @@ impl MatchPattern {
 
 pub struct Match<'a> {
     pub pattern: &'a MatchPattern,
-    pub positions: HashMap<Pos, Pos>
+    pub changed_pos: Pos,
+    pattern_to_board_pos: HashMap<Pos, Pos>
+}
+
+impl Match<'_> {
+    pub fn convert_to_board_pos(&self, pattern_pos: Pos) -> Pos {
+        *self.pattern_to_board_pos.get(&pattern_pos).expect(
+            &*format!("The position {} is not in the pattern", pattern_pos)
+        )
+    }
 }

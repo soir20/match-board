@@ -26,13 +26,38 @@ impl Sub for Pos {
 
 pub struct Board {
     patterns: Vec<MatchPattern>,
+    swap_rules: Vec<Box<dyn Fn(Pos, Pos) -> bool>>,
     pieces: HashMap<Pos, Piece>,
     last_changed: VecDeque<Pos>
 }
 
 impl Board {
+    pub fn new(patterns: Vec<MatchPattern>, swap_rules: Vec<Box<dyn Fn(Pos, Pos) -> bool>>) -> Board {
+        Board { patterns, swap_rules, pieces: HashMap::new(), last_changed: VecDeque::new() }
+    }
+
     pub fn get_piece(&self, pos: Pos) -> Option<&Piece> {
         self.pieces.get(&pos)
+    }
+
+    #[must_use]
+    pub fn swap_pieces(&mut self, first: Pos, second: Pos) -> bool {
+        if !self.swap_rules.iter().all(|rule| rule(first, second)) {
+            return false;
+        }
+
+        let original_first_piece = self.pieces.remove(&first);
+        let original_second_piece = self.pieces.remove(&second);
+
+        if let Some(piece) = original_first_piece {
+            self.pieces.insert(second, piece);
+        }
+
+        if let Some(piece) = original_second_piece {
+            self.pieces.insert(first, piece);
+        }
+
+        true
     }
 
     pub fn set_piece(&mut self, pos: Pos, piece: Piece) -> Option<Piece> {

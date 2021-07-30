@@ -2,9 +2,15 @@ use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Hash)]
 pub struct PieceType {
-    name: String
+    name: &'static str
+}
+
+impl PieceType {
+    pub fn new(name: &str) -> PieceType {
+        PieceType { name }
+    }
 }
 
 #[derive(EnumSetType)]

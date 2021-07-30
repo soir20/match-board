@@ -5,8 +5,18 @@ use std::fmt::{Display, Formatter};
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
 pub struct Pos {
-    pub x: i32,
-    pub y: i32
+    x: i32,
+    y: i32
+}
+
+impl Pos {
+    pub fn get_x(&self) -> i32 {
+        self.x
+    }
+
+    pub fn get_y(&self) -> i32 {
+        self.y
+    }
 }
 
 impl Add for Pos {
@@ -169,12 +179,20 @@ impl MatchPattern {
 }
 
 pub struct Match<'a> {
-    pub pattern: &'a MatchPattern,
-    pub changed_pos: Pos,
+    pattern: &'a MatchPattern,
+    changed_pos: Pos,
     pattern_to_board_pos: HashMap<Pos, Pos>
 }
 
 impl Match<'_> {
+    pub fn get_pattern(&self) -> &MatchPattern {
+        self.pattern
+    }
+
+    pub fn get_changed_pos(&self) -> Pos {
+        self.changed_pos
+    }
+
     pub fn convert_to_board_pos(&self, pattern_pos: Pos) -> Pos {
         *self.pattern_to_board_pos.get(&pattern_pos).expect(
             &*format!("The position {} is not in the pattern", pattern_pos)

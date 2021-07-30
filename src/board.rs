@@ -1,45 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use crate::piece::{Piece, PieceType, Direction};
-use std::ops::{Add, Sub};
-use std::fmt::{Display, Formatter};
-
-#[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
-pub struct Pos {
-    x: i32,
-    y: i32
-}
-
-impl Pos {
-    pub fn get_x(&self) -> i32 {
-        self.x
-    }
-
-    pub fn get_y(&self) -> i32 {
-        self.y
-    }
-}
-
-impl Add for Pos {
-    type Output = Pos;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Pos {x: self.x + rhs.x, y: self.y + rhs.y}
-    }
-}
-
-impl Sub for Pos {
-    type Output = Pos;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Pos {x: self.x - rhs.x, y: self.y - rhs.y}
-    }
-}
-
-impl Display for Pos {
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "({}, {})", self.x, self.y)
-    }
-}
+use crate::position::Pos;
 
 pub struct Board {
     patterns: Vec<MatchPattern>,
@@ -119,7 +80,7 @@ fn is_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
 }
 
 fn is_vertically_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
-    let vertical_change = to.y - from.y;
+    let vertical_change = to.get_y() - from.get_y();
     if vertical_change > 0 {
         return piece.is_movable(Direction::North);
     } else if vertical_change < 0 {
@@ -130,7 +91,7 @@ fn is_vertically_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
 }
 
 fn is_horizontally_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
-    let horizontal_change = to.x - from.x;
+    let horizontal_change = to.get_x() - from.get_x();
     if horizontal_change > 0 {
         return piece.is_movable(Direction::East);
     } else if horizontal_change < 0 {

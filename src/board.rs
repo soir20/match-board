@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use crate::piece::{Piece, PieceType, Direction};
+use crate::piece::{Piece, Direction};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
 

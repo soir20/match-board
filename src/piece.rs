@@ -2,13 +2,13 @@ use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct PieceType {
     name: &'static str
 }
 
 impl PieceType {
-    pub fn new(name: &str) -> PieceType {
+    pub fn new(name: &'static str) -> PieceType {
         PieceType { name }
     }
 }

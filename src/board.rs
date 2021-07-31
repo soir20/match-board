@@ -27,6 +27,9 @@ impl Board {
             return false;
         }
 
+        self.last_changed.push_back(first);
+        self.last_changed.push_back(second);
+
         let original_first_piece = self.pieces.remove(&first);
         let original_second_piece = self.pieces.remove(&second);
 

@@ -91,3 +91,118 @@ impl Piece {
     }
 
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::piece::{Piece, PieceType, Direction};
+
+    #[test]
+    fn new_defaults_movable_all_directions() {
+        let piece = Piece::new(PieceType::new("type"));
+        assert!(piece.is_movable(Direction::North));
+        assert!(piece.is_movable(Direction::South));
+        assert!(piece.is_movable(Direction::East));
+        assert!(piece.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn make_movable_already_movable_still_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_movable(Direction::North);
+        assert!(piece.is_movable(Direction::North));
+    }
+
+    #[test]
+    fn make_movable_all_already_movable_still_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_movable_all();
+        assert!(piece.is_movable(Direction::North));
+        assert!(piece.is_movable(Direction::South));
+        assert!(piece.is_movable(Direction::East));
+        assert!(piece.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn make_unmovable_already_unmovable_still_unmovable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::North);
+        piece.make_unmovable(Direction::North);
+        assert!(!piece.is_movable(Direction::North));
+    }
+
+    #[test]
+    fn make_movable_north_not_movable_made_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::North);
+        piece.make_movable(Direction::North);
+        assert!(piece.is_movable(Direction::North));
+    }
+
+    #[test]
+    fn make_movable_south_not_movable_made_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::South);
+        piece.make_movable(Direction::South);
+        assert!(piece.is_movable(Direction::South));
+    }
+
+    #[test]
+    fn make_movable_east_not_movable_made_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::East);
+        piece.make_movable(Direction::East);
+        assert!(piece.is_movable(Direction::East));
+    }
+
+    #[test]
+    fn make_movable_west_not_movable_made_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::West);
+        piece.make_movable(Direction::West);
+        assert!(piece.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn make_unmovable_north_movable_made_unmovable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::North);
+        assert!(!piece.is_movable(Direction::North));
+    }
+
+    #[test]
+    fn make_unmovable_south_movable_made_unmovable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::South);
+        assert!(!piece.is_movable(Direction::South));
+    }
+
+    #[test]
+    fn make_unmovable_east_movable_made_unmovable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::East);
+        assert!(!piece.is_movable(Direction::East));
+    }
+
+    #[test]
+    fn make_unmovable_west_movable_made_unmovable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable(Direction::West);
+        assert!(!piece.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn make_unmovable_all_not_movable() {
+        let mut piece = Piece::new(PieceType::new("type"));
+        piece.make_unmovable_all();
+        assert!(!piece.is_movable(Direction::North));
+        assert!(!piece.is_movable(Direction::South));
+        assert!(!piece.is_movable(Direction::East));
+        assert!(!piece.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn get_type_gets_type() {
+        let piece = Piece::new(PieceType::new("type"));
+        assert_eq!(&PieceType::new("type"), piece.get_type());
+    }
+}

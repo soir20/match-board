@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn convert_to_board_pos_not_in_pattern_gets_board_pos() {
+    fn convert_to_board_pos_not_in_pattern_panics() {
         let mut spaces_to_types = HashMap::new();
         spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
         spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));

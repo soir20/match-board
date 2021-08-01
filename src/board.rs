@@ -3,6 +3,32 @@ use crate::piece::{Piece, Direction};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
 
+/// Contains zero or many and represents the current state
+/// of the game pieces.
+///
+/// By default, the board is empty. It has no fixed bounds.
+///
+/// Users are responsible for updating the board state at the
+/// start of a game and after each match.
+///
+/// The board detects matches based on user-provided match patterns.
+/// It does not have any match patterns by default. Patterns with
+/// higher rank are preferred over those with lower rank.
+///
+/// The whole board is not scanned to check for matches. When a
+/// piece is changed, either because it is set/overwritten or it
+/// is swapped, it is marked as having changed. Then the changed
+/// pieces are selectively checked for matches. Users should update
+/// the board based on the positions provided in the match.
+///
+/// Swap rules define which pieces can be changed. By default, the
+/// only swap rule in place is that pieces marked unmovable in a
+/// direction cannot be moved any amount in that direction. **This
+/// means that pieces further than one space away can be swapped by
+/// default.**
+///
+/// The board's lack of default restrictions allows games to implement
+/// their own unique or non-standard rules.
 pub struct Board {
     patterns: Vec<MatchPattern>,
     swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>,
@@ -11,16 +37,50 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(patterns: Vec<MatchPattern>,
+
+    /// Creates a new board.
+    ///
+    /// # Arguments
+    ///
+    /// * `patterns` - the match patterns the board should use to detect matches
+    /// * `swap_rules` - the swap rules that define whether two pieces can be swapped.
+    ///                  If any rule returns false for two positions, the pieces are
+    ///                  not swapped, and the swap method returns false.
+    pub fn new(mut patterns: Vec<MatchPattern>,
                mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
         swap_rules.insert(0, Box::from(Board::are_pieces_movable));
         Board { patterns, swap_rules, pieces: HashMap::new(), last_changed: VecDeque::new() }
     }
 
+    /// Gets a piece at the given position on the board if one is present.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - position of the piece to get
     pub fn get_piece(&self, pos: Pos) -> Option<&Piece> {
         self.pieces.get(&pos)
     }
 
+    /// Attempts to swap two pieces on the board. If any swap rule is broken (i.e. it
+    /// results false), then the pieces will not be swapped, and this method will
+    /// return true.
+    ///
+    /// If the swap is successful, both swapped positions will be marked for a match check.
+    ///
+    /// Swapping a piece in a direction in which it is marked unmovable is automatically
+    /// a violation of the swap rules.
+    ///
+    /// Swapping with a piece that is not present is considered valid. The existing piece
+    /// moves into the empty space while the other space is cleared. It is also valid to
+    /// swap a piece with itself, though this has no effect on the board besides marking
+    /// the piece for a match check.
+    ///
+    /// The order of two positions provided does not matter.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - the first position of a piece to swap
+    /// * `second` - the second position of a piece to swap
     #[must_use]
     pub fn swap_pieces(&mut self, first: Pos, second: Pos) -> bool {
         if !self.swap_rules.iter().all(|rule| rule(self, first, second)) {
@@ -44,11 +104,27 @@ impl Board {
         true
     }
 
+    /// Replaces a piece at the given position and returns the previous piece
+    /// if one was present. The space is marked as needing a match check. Swap
+    /// rules do not apply and the replacement is always successful.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position of the piece to replace
+    /// * `piece` - the piece to put at the given position
     pub fn set_piece(&mut self, pos: Pos, piece: Piece) -> Option<Piece> {
         self.last_changed.push_back(pos);
         self.pieces.insert(pos, piece)
     }
 
+    /// Gets the next match on the board. Matches from pieces that were changed
+    /// earlier are returned first. Matches are always based on the current board
+    /// state, not the board state when the match occurred.
+    ///
+    /// Pieces that were changed but did not create a match are skipped.
+    ///
+    /// Regardless of whether a match is found, each piece is unmarked for a
+    /// match check, unless it has been marked multiple times.
     pub fn next_match(&mut self) -> Option<Match> {
         let mut next_pos;
         let mut next_match = None;

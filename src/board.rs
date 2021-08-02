@@ -2,6 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use crate::piece::{Piece, Direction};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
+use std::cmp::Ordering;
 
 /// Contains zero or many and represents the current state
 /// of the game pieces.
@@ -42,12 +43,14 @@ impl Board {
     ///
     /// # Arguments
     ///
-    /// * `patterns` - the match patterns the board should use to detect matches
+    /// * `patterns` - the match patterns the board should use to detect matches. If
+    ///                two patterns have the same rank, no order is guaranteed.
     /// * `swap_rules` - the swap rules that define whether two pieces can be swapped.
     ///                  If any rule returns false for two positions, the pieces are
     ///                  not swapped, and the swap method returns false.
     pub fn new(mut patterns: Vec<MatchPattern>,
                mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
+        patterns.sort_by(|a, b| b.get_rank().cmp(&a.get_rank()));
         swap_rules.insert(0, Box::from(Board::are_pieces_movable));
         Board { patterns, swap_rules, pieces: HashMap::new(), last_changed: VecDeque::new() }
     }

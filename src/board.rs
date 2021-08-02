@@ -46,7 +46,9 @@ impl Board {
     ///                two patterns have the same rank, no order is guaranteed.
     /// * `swap_rules` - the swap rules that define whether two pieces can be swapped.
     ///                  If any rule returns false for two positions, the pieces are
-    ///                  not swapped, and the swap method returns false.
+    ///                  not swapped, and the swap method returns false. These rules
+    ///                  are executed in the order provided after the default rule,
+    ///                  so less expensive calculations should be done in earlier rules.
     pub fn new(mut patterns: Vec<MatchPattern>,
                mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
         patterns.sort_by(|a, b| b.get_rank().cmp(&a.get_rank()));

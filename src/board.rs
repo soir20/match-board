@@ -2,7 +2,6 @@ use std::collections::{HashMap, VecDeque};
 use crate::piece::{Piece, Direction};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
-use std::cmp::Ordering;
 
 /// Contains zero or many and represents the current state
 /// of the game pieces.

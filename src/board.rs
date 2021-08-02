@@ -140,12 +140,28 @@ impl Board {
         next_match
     }
 
+    /// Looks for a match for a specific pattern and changed position. All variants
+    /// of the match that contain the changed position are checked.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - the match pattern to look for
+    /// * `pos` - the changed position to check around
     fn find_match(&self, pattern: &MatchPattern, pos: Pos) -> Option<HashMap<Pos, Pos>> {
         pattern.get_spaces().keys().into_iter().find_map(|&original|
             self.check_variant_match(pattern, pos - original)
         )
     }
 
+    /// Checks a specific variant of a match pattern, that is, with the changed position
+    /// at a specific place in the pattern. A space with no piece is automatically not a
+    /// match.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - the pattern to check if it matches
+    /// * `new_origin` - the origin to use for the match pattern so that its positions
+    ///                  correspond to positions on the board
     fn check_variant_match(&self, pattern: &MatchPattern, new_origin: Pos) -> Option<HashMap<Pos, Pos>> {
         let original_to_board_pos = Board::change_origin(pattern, new_origin);
         let is_match = original_to_board_pos.iter().all(|(original_pos, board_pos)|
@@ -162,6 +178,12 @@ impl Board {
         }
     }
 
+    /// Maps the positions of a match pattern to have a new origin.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - the pattern whose positions to convert
+    /// * `origin` - the new origin to use for the pattern's positions
     fn change_origin(pattern: &MatchPattern, origin: Pos) -> HashMap<Pos, Pos> {
         let mut original_positions: Vec<Pos> = pattern.get_spaces().keys().map(|&pos| pos).collect();
         let mut changed_positions: Vec<Pos> = original_positions.iter().map(
@@ -171,13 +193,20 @@ impl Board {
         original_positions.drain(..).zip(changed_positions.drain(..)).collect()
     }
 
-    fn are_pieces_movable(board: &Board, first: Pos, second: Pos) -> bool {
-        let is_first_movable = match board.get_piece(first) {
+    /// Checks if the pieces at two positions on the board are both movable in the
+    /// direction in which they would be swapped.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - the position of the first piece to check
+    /// * `second` - the position of the second piece to check
+    fn are_pieces_movable(&self, first: Pos, second: Pos) -> bool {
+        let is_first_movable = match self.get_piece(first) {
             None => true,
             Some(piece) => Board::is_movable(first, second, piece)
         };
 
-        let is_second_movable = match board.get_piece(second) {
+        let is_second_movable = match self.get_piece(second) {
             None => true,
             Some(piece) => Board::is_movable(second, first, piece)
         };
@@ -185,10 +214,27 @@ impl Board {
         is_first_movable && is_second_movable
     }
 
+    /// Checks if a piece is movable vertically and horizontally.
+    ///
+    /// # Arguments
+    ///
+    /// * `from` - the current position of the piece
+    /// * `to` - the position where the piece will be moved
+    /// * `piece` - the at the "from" position
     fn is_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
-        Board::is_vertically_movable(from, to, piece) && Board::is_horizontally_movable(from, to, piece)
+        Board::is_vertically_movable(from, to, piece)
+            && Board::is_horizontally_movable(from, to, piece)
     }
 
+    /// Checks if a piece is vertically movable from one position to another.
+    /// If there is no vertical change between the two positions, the piece
+    /// is considered movable.
+    ///
+    /// # Arguments
+    ///
+    /// * `from` - the current position of the piece
+    /// * `to` - the position where the piece will be moved
+    /// * `piece` - the at the "from" position
     fn is_vertically_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
         let vertical_change = to.get_y() - from.get_y();
         if vertical_change > 0 {
@@ -200,6 +246,15 @@ impl Board {
         true
     }
 
+    /// Checks if a piece is horizontally movable from one position to another.
+    /// If there is no horizontal change between the two positions, the piece
+    /// is considered movable.
+    ///
+    /// # Arguments
+    ///
+    /// * `from` - the current position of the piece
+    /// * `to` - the position where the piece will be moved
+    /// * `piece` - the at the "from" position
     fn is_horizontally_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
         let horizontal_change = to.get_x() - from.get_x();
         if horizontal_change > 0 {
@@ -210,4 +265,5 @@ impl Board {
 
         true
     }
+
 }

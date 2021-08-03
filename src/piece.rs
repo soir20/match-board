@@ -3,7 +3,7 @@ use enumset::EnumSet;
 use enumset::EnumSetType;
 
 /// A unique category for board pieces.
-#[derive(Debug, Eq, PartialEq, Hash)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub struct PieceType {
     name: &'static str
 }
@@ -86,8 +86,8 @@ impl Piece {
     }
 
     /// Gets the type that this piece belongs to.
-    pub fn get_type(&self) -> &PieceType {
-        &self.piece_type
+    pub fn get_type(&self) -> PieceType {
+        self.piece_type
     }
 
 }
@@ -203,6 +203,6 @@ mod tests {
     #[test]
     fn get_type_gets_type() {
         let piece = Piece::new(PieceType::new("type"));
-        assert_eq!(&PieceType::new("type"), piece.get_type());
+        assert_eq!(PieceType::new("type"), piece.get_type());
     }
 }

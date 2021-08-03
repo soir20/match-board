@@ -171,7 +171,7 @@ impl Board {
         let is_match = original_to_board_pos.iter().all(|(original_pos, board_pos)|
             match self.get_piece(*board_pos) {
                 None => false,
-                Some(piece) => piece.get_type() == pattern.get_spaces().get(original_pos)
+                Some(piece) => piece.get_type() == *pattern.get_spaces().get(original_pos)
                     .expect("Known piece wasn't found in pattern!")
             }
         );
@@ -270,4 +270,633 @@ impl Board {
         true
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::board::Board;
+    use crate::position::Pos;
+    use crate::piece::{PieceType, Piece, Direction};
+    use std::collections::HashMap;
+    use crate::matching::MatchPattern;
+
+    #[test]
+    fn swap_adjacent_all_rules_passed_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), piece2);
+
+        assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_non_adjacent_all_rules_passed_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(20, 31), piece2);
+
+        assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(20, 31)));
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(20, 31)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_rules_violated_not_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| false)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), piece2);
+
+        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_rules_violated_short_circuits() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| false),
+            Box::new(|_, _, _| { panic!("Should short circuit before this") })
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), piece2);
+
+        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
+    }
+
+    #[test]
+    fn swap_empty_all_rules_passed_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::new(type1);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+
+        assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
+        assert!(board.get_piece(Pos::new(1, 2)).is_none());
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_self_all_rules_passed_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::new(type1);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+
+        assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 2)));
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_same_vertical_not_vertically_movable_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let mut piece1 = Piece::new(type1);
+        piece1.make_unmovable(Direction::North);
+        piece1.make_unmovable(Direction::South);
+
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(2, 2), piece2);
+
+        assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(2, 2)));
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(2, 2)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_same_horizontal_not_horizontally_movable_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let mut piece1 = Piece::new(type1);
+        piece1.make_unmovable(Direction::East);
+        piece1.make_unmovable(Direction::West);
+
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), piece2);
+
+        assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_north_not_movable_north_not_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let mut piece1 = Piece::new(type1);
+        piece1.make_unmovable(Direction::North);
+
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), piece2);
+
+        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_south_not_movable_south_not_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let mut piece1 = Piece::new(type1);
+        piece1.make_unmovable(Direction::South);
+
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, -3), piece2);
+
+        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, -3)));
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, -3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_east_not_movable_east_not_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let mut piece1 = Piece::new(type1);
+        piece1.make_unmovable(Direction::East);
+
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(2, 3), piece2);
+
+        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(2, 3)));
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(2, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn swap_west_not_movable_west_not_swapped() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let mut piece1 = Piece::new(type1);
+        piece1.make_unmovable(Direction::West);
+
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(-2, 3), piece2);
+
+        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(-2, 3)));
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(-2, 3)).unwrap().get_type());
+    }
+
+    #[test]
+    fn set_piece_not_present_none_returned() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::new(type1);
+
+        assert!(board.set_piece(Pos::new(1, 2), piece1).is_none());
+        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+    }
+
+    #[test]
+    fn set_piece_present_old_piece_returned() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        assert_eq!(PieceType::new("first"), board.set_piece(Pos::new(1, 2), piece2).unwrap().get_type());
+        assert_eq!(PieceType::new("second"),
+                   board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+    }
+
+    #[test]
+    fn next_match_no_patterns_none() {
+        let mut board = Board::new(Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type1);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(2, 3), piece2);
+        assert!(board.next_match().is_none());
+    }
+
+    #[test]
+    fn next_match_set_pieces_match_found() {
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 3), PieceType::new("first"));
+        pattern_pos.insert(Pos::new(3, 3), PieceType::new("first"));
+        pattern_pos.insert(Pos::new(-2, -2), PieceType::new("first"));
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("first");
+        let type3 = PieceType::new("first");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+        let piece3 = Piece::new(type3);
+
+        board.set_piece(Pos::new(0, 1), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(-4, -4), piece3);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(0, 1), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 1), next_match.convert_to_board_pos(Pos::new(2, 3)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(-4, -4), next_match.convert_to_board_pos(Pos::new(-2, -2)));
+    }
+
+    #[test]
+    fn next_match_swap_pieces_match_found() {
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 3), PieceType::new("first"));
+        pattern_pos.insert(Pos::new(3, 3), PieceType::new("first"));
+        pattern_pos.insert(Pos::new(-2, -2), PieceType::new("first"));
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("first");
+        let type3 = PieceType::new("first");
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+        let piece3 = Piece::new(type3);
+
+        board.set_piece(Pos::new(0, 1), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(-3, -3), piece3);
+        board.next_match();
+        board.next_match();
+        board.next_match();
+
+        assert!(board.swap_pieces(Pos::new(-3, -3), Pos::new(-4, -4)));
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(-4, -4), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 1), next_match.convert_to_board_pos(Pos::new(2, 3)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(-4, -4), next_match.convert_to_board_pos(Pos::new(-2, -2)));
+    }
+
+    #[test]
+    fn next_match_matches_all_variants() {
+        let piece_type = PieceType::new("first");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), piece_type);
+        pattern_pos.insert(Pos::new(3, 3), piece_type);
+        pattern_pos.insert(Pos::new(4, 4), piece_type);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(piece_type);
+        let piece2 = Piece::new(piece_type);
+        let piece3 = Piece::new(piece_type);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(2, 2), piece3);
+
+        let next_match1 = board.next_match().unwrap();
+        assert_eq!(Pos::new(0, 0), next_match1.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match1.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match1.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match1.convert_to_board_pos(Pos::new(4, 4)));
+
+        let next_match2 = board.next_match().unwrap();
+        assert_eq!(Pos::new(1, 1), next_match2.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match2.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match2.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match2.convert_to_board_pos(Pos::new(4, 4)));
+
+        let next_match3 = board.next_match().unwrap();
+        assert_eq!(Pos::new(2, 2), next_match3.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match3.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match3.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match3.convert_to_board_pos(Pos::new(4, 4)));
+    }
+
+    #[test]
+    fn next_match_matches_different_types() {
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let type3 = PieceType::new("third");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), type1);
+        pattern_pos.insert(Pos::new(3, 3), type2);
+        pattern_pos.insert(Pos::new(4, 4), type3);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+        let piece3 = Piece::new(type3);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(2, 2), piece3);
+
+        let next_match1 = board.next_match().unwrap();
+        assert_eq!(Pos::new(0, 0), next_match1.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match1.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match1.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match1.convert_to_board_pos(Pos::new(4, 4)));
+    }
+
+    #[test]
+    fn next_match_does_not_match_wrong_types() {
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+        let type3 = PieceType::new("third");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), type1);
+        pattern_pos.insert(Pos::new(3, 3), type2);
+        pattern_pos.insert(Pos::new(4, 4), type3);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type3);
+        let piece3 = Piece::new(type2);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(2, 2), piece3);
+
+        assert!(board.next_match().is_none());
+        assert!(board.next_match().is_none());
+        assert!(board.next_match().is_none());
+    }
+
+    #[test]
+    fn next_match_matches_when_not_all_in_queue() {
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("first");
+        let type3 = PieceType::new("first");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), type1);
+        pattern_pos.insert(Pos::new(3, 3), type2);
+        pattern_pos.insert(Pos::new(4, 4), type3);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+        let piece3 = Piece::new(type3);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+
+        board.next_match();
+        board.next_match();
+
+        board.set_piece(Pos::new(2, 2), piece3);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
+    }
+
+    #[test]
+    fn next_match_board_state_changed_after_match_still_matches() {
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("first");
+        let type3 = PieceType::new("first");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), type1);
+        pattern_pos.insert(Pos::new(3, 3), type2);
+        pattern_pos.insert(Pos::new(4, 4), type3);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+        let piece3 = Piece::new(type3);
+        let piece4 = Piece::new(type1);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+
+        board.next_match();
+        board.next_match();
+
+        board.set_piece(Pos::new(2, 2), piece3);
+        board.set_piece(Pos::new(2, 3), piece4);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
+    }
+
+    #[test]
+    fn next_match_match_overwritten_does_not_match() {
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("first");
+        let type3 = PieceType::new("first");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), type1);
+        pattern_pos.insert(Pos::new(3, 3), type2);
+        pattern_pos.insert(Pos::new(4, 4), type3);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type2);
+        let piece3 = Piece::new(type3);
+        let piece4 = Piece::new(type1);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+
+        board.next_match();
+        board.next_match();
+
+        board.set_piece(Pos::new(2, 2), piece3);
+        assert!(board.swap_pieces(Pos::new(2, 2), Pos::new(2, 3)));
+        assert!(board.next_match().is_none());
+    }
+
+    #[test]
+    fn next_match_position_in_queue_twice_matches_twice() {
+        let piece_type = PieceType::new("first");
+        let mut pattern_pos = HashMap::new();
+        pattern_pos.insert(Pos::new(2, 2), piece_type);
+        pattern_pos.insert(Pos::new(3, 3), piece_type);
+        pattern_pos.insert(Pos::new(4, 4), piece_type);
+
+        let mut board = Board::new(vec![MatchPattern::new(pattern_pos, 1)], Vec::new());
+        let piece1 = Piece::new(piece_type);
+        let piece2 = Piece::new(piece_type);
+        let piece3 = Piece::new(piece_type);
+        let piece4 = Piece::new(piece_type);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+
+        board.next_match();
+        board.next_match();
+
+        board.set_piece(Pos::new(2, 2), piece3);
+        board.set_piece(Pos::new(2, 2), piece4);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
+    }
+
+    #[test]
+    fn next_match_two_patterns_same_rank_matching_picked() {
+        let type1 = PieceType::new("first");
+        let type2 = PieceType::new("second");
+
+        let mut pattern_pos1 = HashMap::new();
+        pattern_pos1.insert(Pos::new(2, 2), type2);
+        pattern_pos1.insert(Pos::new(3, 3), type2);
+        pattern_pos1.insert(Pos::new(4, 4), type2);
+
+        let mut pattern_pos2 = HashMap::new();
+        pattern_pos2.insert(Pos::new(2, 2), type1);
+        pattern_pos2.insert(Pos::new(3, 3), type1);
+        pattern_pos2.insert(Pos::new(4, 4), type1);
+
+        let mut board = Board::new(vec![
+            MatchPattern::new(pattern_pos1, 1),
+            MatchPattern::new(pattern_pos2, 1)
+        ], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type1);
+        let piece3 = Piece::new(type1);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+
+        board.next_match();
+        board.next_match();
+
+        board.set_piece(Pos::new(2, 2), piece3);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
+    }
+
+    #[test]
+    fn next_match_two_patterns_different_rank_higher_picked() {
+        let type1 = PieceType::new("first");
+
+        let mut pattern_pos1 = HashMap::new();
+        pattern_pos1.insert(Pos::new(2, 2), type1);
+        pattern_pos1.insert(Pos::new(3, 3), type1);
+        pattern_pos1.insert(Pos::new(4, 4), type1);
+
+        let mut pattern_pos2 = HashMap::new();
+        pattern_pos2.insert(Pos::new(1, 1), type1);
+        pattern_pos2.insert(Pos::new(2, 2), type1);
+        pattern_pos2.insert(Pos::new(3, 3), type1);
+        pattern_pos2.insert(Pos::new(4, 4), type1);
+
+        let mut board = Board::new(vec![
+            MatchPattern::new(pattern_pos1, 1),
+            MatchPattern::new(pattern_pos2, 2)
+        ], Vec::new());
+        let piece1 = Piece::new(type1);
+        let piece2 = Piece::new(type1);
+        let piece3 = Piece::new(type1);
+        let piece4 = Piece::new(type1);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(2, 2), piece3);
+
+        board.next_match();
+        board.next_match();
+        board.next_match();
+
+        board.set_piece(Pos::new(3, 3), piece4);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(3, 3), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(1, 1)));
+        assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(2, 2)));
+        assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(3, 3)));
+        assert_eq!(Pos::new(3, 3), next_match.convert_to_board_pos(Pos::new(4, 4)));
+    }
 }

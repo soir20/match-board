@@ -777,7 +777,6 @@ mod tests {
         let piece1 = Piece::new(type1);
         let piece2 = Piece::new(type2);
         let piece3 = Piece::new(type3);
-        let piece4 = Piece::new(type1);
 
         board.set_piece(Pos::new(0, 0), piece1);
         board.set_piece(Pos::new(1, 1), piece2);

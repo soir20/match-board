@@ -24,12 +24,12 @@ impl MatchPattern {
     }
 
     /// Gets the relative position to type mapping for this pattern.
-    pub fn get_spaces(&self) -> &HashMap<Pos, PieceType> {
+    pub fn spaces(&self) -> &HashMap<Pos, PieceType> {
         &self.spaces
     }
 
     // Gets the rank of this pattern.
-    pub fn get_rank(&self) -> u32 {
+    pub fn rank(&self) -> u32 {
         self.rank
     }
 
@@ -59,12 +59,12 @@ impl Match<'_> {
     }
 
     /// Gets the pattern associated with this match.
-    pub fn get_pattern(&self) -> &MatchPattern {
+    pub fn pattern(&self) -> &MatchPattern {
         self.pattern
     }
 
     /// Gets the changed position that triggered this match.
-    pub fn get_changed_pos(&self) -> Pos {
+    pub fn changed_pos(&self) -> Pos {
         self.changed_pos
     }
 
@@ -94,7 +94,7 @@ mod tests {
     fn new_pattern_empty_map_works() {
         let spaces_to_types = HashMap::new();
         let pattern = MatchPattern::new(spaces_to_types, 10);
-        assert!(pattern.get_spaces().is_empty());
+        assert!(pattern.spaces().is_empty());
     }
 
     #[test]
@@ -105,10 +105,10 @@ mod tests {
         spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
 
         let pattern = MatchPattern::new(spaces_to_types, 10);
-        assert_eq!(3, pattern.get_spaces().len());
-        assert_eq!(&PieceType::new("first"), pattern.get_spaces().get(&Pos::new(0, 1)).unwrap());
-        assert_eq!(&PieceType::new("second"), pattern.get_spaces().get(&Pos::new(1, 0)).unwrap());
-        assert_eq!(&PieceType::new("first"), pattern.get_spaces().get(&Pos::new(5, 5)).unwrap());
+        assert_eq!(3, pattern.spaces().len());
+        assert_eq!(&PieceType::new("first"), pattern.spaces().get(&Pos::new(0, 1)).unwrap());
+        assert_eq!(&PieceType::new("second"), pattern.spaces().get(&Pos::new(1, 0)).unwrap());
+        assert_eq!(&PieceType::new("first"), pattern.spaces().get(&Pos::new(5, 5)).unwrap());
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
         spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
 
         let pattern = MatchPattern::new(spaces_to_types, 10);
-        assert_eq!(10, pattern.get_rank());
+        assert_eq!(10, pattern.rank());
     }
 
     #[test]
@@ -136,7 +136,7 @@ mod tests {
         pattern_to_board.insert(Pos::new(5, 5), Pos::new(10, 3));
 
         let match1 = Match::new(&pattern, Pos::new(6, -2), pattern_to_board);
-        assert_eq!(pattern, *match1.get_pattern());
+        assert_eq!(pattern, *match1.pattern());
     }
 
     #[test]
@@ -153,7 +153,7 @@ mod tests {
         pattern_to_board.insert(Pos::new(5, 5), Pos::new(10, 3));
 
         let match1 = Match::new(&pattern, Pos::new(6, -2), pattern_to_board);
-        assert_eq!(Pos::new(6, -2), match1.get_changed_pos());
+        assert_eq!(Pos::new(6, -2), match1.changed_pos());
     }
 
     #[test]

@@ -51,7 +51,7 @@ impl Board {
     ///                  so less expensive calculations should be done in earlier rules.
     pub fn new(mut patterns: Vec<MatchPattern>,
                mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
-        patterns.sort_by(|a, b| b.get_rank().cmp(&a.get_rank()));
+        patterns.sort_by(|a, b| b.rank().cmp(&a.rank()));
         swap_rules.insert(0, Box::from(Board::are_pieces_movable));
         Board { patterns, swap_rules, pieces: HashMap::new(), last_changed: VecDeque::new() }
     }
@@ -61,7 +61,7 @@ impl Board {
     /// # Arguments
     ///
     /// * `pos` - position of the piece to get
-    pub fn get_piece(&self, pos: Pos) -> Option<&Piece> {
+    pub fn piece(&self, pos: Pos) -> Option<&Piece> {
         self.pieces.get(&pos)
     }
 
@@ -152,7 +152,7 @@ impl Board {
     /// * `pattern` - the match pattern to look for
     /// * `pos` - the changed position to check around
     fn find_match(&self, pattern: &MatchPattern, pos: Pos) -> Option<HashMap<Pos, Pos>> {
-        pattern.get_spaces().keys().into_iter().find_map(|&original|
+        pattern.spaces().keys().into_iter().find_map(|&original|
             self.check_variant_match(pattern, pos - original)
         )
     }
@@ -169,9 +169,9 @@ impl Board {
     fn check_variant_match(&self, pattern: &MatchPattern, new_origin: Pos) -> Option<HashMap<Pos, Pos>> {
         let original_to_board_pos = Board::change_origin(pattern, new_origin);
         let is_match = original_to_board_pos.iter().all(|(original_pos, board_pos)|
-            match self.get_piece(*board_pos) {
+            match self.piece(*board_pos) {
                 None => false,
-                Some(piece) => piece.get_type() == *pattern.get_spaces().get(original_pos)
+                Some(piece) => piece.piece_type() == *pattern.spaces().get(original_pos)
                     .expect("Known piece wasn't found in pattern!")
             }
         );
@@ -189,7 +189,7 @@ impl Board {
     /// * `pattern` - the pattern whose positions to convert
     /// * `origin` - the new origin to use for the pattern's positions
     fn change_origin(pattern: &MatchPattern, origin: Pos) -> HashMap<Pos, Pos> {
-        let mut original_positions: Vec<Pos> = pattern.get_spaces().keys().map(|&pos| pos).collect();
+        let mut original_positions: Vec<Pos> = pattern.spaces().keys().map(|&pos| pos).collect();
         let mut changed_positions: Vec<Pos> = original_positions.iter().map(
             |&original| original + origin
         ).collect();
@@ -205,12 +205,12 @@ impl Board {
     /// * `first` - the position of the first piece to check
     /// * `second` - the position of the second piece to check
     fn are_pieces_movable(&self, first: Pos, second: Pos) -> bool {
-        let is_first_movable = match self.get_piece(first) {
+        let is_first_movable = match self.piece(first) {
             None => true,
             Some(piece) => Board::is_movable(first, second, piece)
         };
 
-        let is_second_movable = match self.get_piece(second) {
+        let is_second_movable = match self.piece(second) {
             None => true,
             Some(piece) => Board::is_movable(second, first, piece)
         };
@@ -240,7 +240,7 @@ impl Board {
     /// * `to` - the position where the piece will be moved
     /// * `piece` - the at the "from" position
     fn is_vertically_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
-        let vertical_change = to.get_y() - from.get_y();
+        let vertical_change = to.y() - from.y();
         if vertical_change > 0 {
             return piece.is_movable(Direction::North);
         } else if vertical_change < 0 {
@@ -260,7 +260,7 @@ impl Board {
     /// * `to` - the position where the piece will be moved
     /// * `piece` - the at the "from" position
     fn is_horizontally_movable(from: Pos, to: Pos, piece: &Piece) -> bool {
-        let horizontal_change = to.get_x() - from.get_x();
+        let horizontal_change = to.x() - from.x();
         if horizontal_change > 0 {
             return piece.is_movable(Direction::East);
         } else if horizontal_change < 0 {
@@ -295,8 +295,8 @@ mod tests {
         board.set_piece(Pos::new(1, 3), piece2);
 
         assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -314,8 +314,8 @@ mod tests {
         board.set_piece(Pos::new(20, 31), piece2);
 
         assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(20, 31)));
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(20, 31)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(20, 31)).unwrap().piece_type());
     }
 
     #[test]
@@ -333,8 +333,8 @@ mod tests {
         board.set_piece(Pos::new(1, 3), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -366,8 +366,8 @@ mod tests {
         board.set_piece(Pos::new(1, 2), piece1);
 
         assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
-        assert!(board.get_piece(Pos::new(1, 2)).is_none());
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+        assert!(board.piece(Pos::new(1, 2)).is_none());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -382,7 +382,7 @@ mod tests {
         board.set_piece(Pos::new(1, 2), piece1);
 
         assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 2)));
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
     }
 
     #[test]
@@ -403,8 +403,8 @@ mod tests {
         board.set_piece(Pos::new(2, 2), piece2);
 
         assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(2, 2)));
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(2, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(2, 2)).unwrap().piece_type());
     }
 
     #[test]
@@ -425,8 +425,8 @@ mod tests {
         board.set_piece(Pos::new(1, 3), piece2);
 
         assert!(board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -446,8 +446,8 @@ mod tests {
         board.set_piece(Pos::new(1, 3), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, 3)));
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, 3)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -467,8 +467,8 @@ mod tests {
         board.set_piece(Pos::new(1, -3), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, -3)));
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(1, -3)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(1, -3)).unwrap().piece_type());
     }
 
     #[test]
@@ -488,8 +488,8 @@ mod tests {
         board.set_piece(Pos::new(2, 3), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(2, 3)));
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(2, 3)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(2, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -509,8 +509,8 @@ mod tests {
         board.set_piece(Pos::new(-2, 3), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(-2, 3)));
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
-        assert_eq!(PieceType::new("second"), board.get_piece(Pos::new(-2, 3)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
+        assert_eq!(PieceType::new("second"), board.piece(Pos::new(-2, 3)).unwrap().piece_type());
     }
 
     #[test]
@@ -523,7 +523,7 @@ mod tests {
         let piece1 = Piece::new(type1);
 
         assert!(board.set_piece(Pos::new(1, 2), piece1).is_none());
-        assert_eq!(PieceType::new("first"), board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.piece(Pos::new(1, 2)).unwrap().piece_type());
     }
 
     #[test]
@@ -538,9 +538,9 @@ mod tests {
         let piece2 = Piece::new(type2);
 
         board.set_piece(Pos::new(1, 2), piece1);
-        assert_eq!(PieceType::new("first"), board.set_piece(Pos::new(1, 2), piece2).unwrap().get_type());
+        assert_eq!(PieceType::new("first"), board.set_piece(Pos::new(1, 2), piece2).unwrap().piece_type());
         assert_eq!(PieceType::new("second"),
-                   board.get_piece(Pos::new(1, 2)).unwrap().get_type());
+                   board.piece(Pos::new(1, 2)).unwrap().piece_type());
     }
 
     #[test]
@@ -578,7 +578,7 @@ mod tests {
         board.set_piece(Pos::new(-4, -4), piece3);
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(0, 1), next_match.get_changed_pos());
+        assert_eq!(Pos::new(0, 1), next_match.changed_pos());
         assert_eq!(Pos::new(0, 1), next_match.convert_to_board_pos(Pos::new(2, 3)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(-4, -4), next_match.convert_to_board_pos(Pos::new(-2, -2)));
@@ -609,7 +609,7 @@ mod tests {
         assert!(board.swap_pieces(Pos::new(-3, -3), Pos::new(-4, -4)));
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(-4, -4), next_match.get_changed_pos());
+        assert_eq!(Pos::new(-4, -4), next_match.changed_pos());
         assert_eq!(Pos::new(0, 1), next_match.convert_to_board_pos(Pos::new(2, 3)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(-4, -4), next_match.convert_to_board_pos(Pos::new(-2, -2)));
@@ -633,19 +633,19 @@ mod tests {
         board.set_piece(Pos::new(2, 2), piece3);
 
         let next_match1 = board.next_match().unwrap();
-        assert_eq!(Pos::new(0, 0), next_match1.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match1.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match1.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match1.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match1.convert_to_board_pos(Pos::new(4, 4)));
 
         let next_match2 = board.next_match().unwrap();
-        assert_eq!(Pos::new(1, 1), next_match2.get_changed_pos());
+        assert_eq!(Pos::new(1, 1), next_match2.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match2.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match2.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match2.convert_to_board_pos(Pos::new(4, 4)));
 
         let next_match3 = board.next_match().unwrap();
-        assert_eq!(Pos::new(2, 2), next_match3.get_changed_pos());
+        assert_eq!(Pos::new(2, 2), next_match3.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match3.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match3.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match3.convert_to_board_pos(Pos::new(4, 4)));
@@ -671,7 +671,7 @@ mod tests {
         board.set_piece(Pos::new(2, 2), piece3);
 
         let next_match1 = board.next_match().unwrap();
-        assert_eq!(Pos::new(0, 0), next_match1.get_changed_pos());
+        assert_eq!(Pos::new(0, 0), next_match1.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match1.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match1.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match1.convert_to_board_pos(Pos::new(4, 4)));
@@ -725,7 +725,7 @@ mod tests {
         board.set_piece(Pos::new(2, 2), piece3);
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(2, 2), next_match.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
@@ -757,7 +757,7 @@ mod tests {
         board.set_piece(Pos::new(2, 3), piece4);
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(2, 2), next_match.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
@@ -814,7 +814,7 @@ mod tests {
         board.set_piece(Pos::new(2, 2), piece4);
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(2, 2), next_match.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
@@ -852,7 +852,7 @@ mod tests {
         board.set_piece(Pos::new(2, 2), piece3);
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(2, 2), next_match.get_changed_pos());
+        assert_eq!(Pos::new(2, 2), next_match.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(3, 3)));
         assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(4, 4)));
@@ -893,7 +893,7 @@ mod tests {
         board.set_piece(Pos::new(3, 3), piece4);
 
         let next_match = board.next_match().unwrap();
-        assert_eq!(Pos::new(3, 3), next_match.get_changed_pos());
+        assert_eq!(Pos::new(3, 3), next_match.changed_pos());
         assert_eq!(Pos::new(0, 0), next_match.convert_to_board_pos(Pos::new(1, 1)));
         assert_eq!(Pos::new(1, 1), next_match.convert_to_board_pos(Pos::new(2, 2)));
         assert_eq!(Pos::new(2, 2), next_match.convert_to_board_pos(Pos::new(3, 3)));

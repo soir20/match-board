@@ -86,7 +86,7 @@ impl Piece {
     }
 
     /// Gets the type that this piece belongs to.
-    pub fn get_type(&self) -> PieceType {
+    pub fn piece_type(&self) -> PieceType {
         self.piece_type
     }
 
@@ -201,8 +201,8 @@ mod tests {
     }
 
     #[test]
-    fn get_type_gets_type() {
+    fn piece_type_gets_type() {
         let piece = Piece::new(PieceType::new("type"));
-        assert_eq!(PieceType::new("type"), piece.get_type());
+        assert_eq!(PieceType::new("type"), piece.piece_type());
     }
 }

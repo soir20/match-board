@@ -26,12 +26,12 @@ impl Pos {
     }
 
     /// Returns the horizontal component of the position.
-    pub fn get_x(&self) -> i32 {
+    pub fn x(&self) -> i32 {
         self.x
     }
 
     /// Returns the vertical component of the position.
-    pub fn get_y(&self) -> i32 {
+    pub fn y(&self) -> i32 {
         self.y
     }
 
@@ -85,29 +85,29 @@ mod tests {
     #[test]
     fn new_positive_components_allowed() {
         let pos = Pos::new(1, 4);
-        assert_eq!(1, pos.get_x());
-        assert_eq!(4, pos.get_y());
+        assert_eq!(1, pos.x());
+        assert_eq!(4, pos.y());
     }
 
     #[test]
     fn new_negative_x_component_allowed() {
         let pos = Pos::new(-1, 4);
-        assert_eq!(-1, pos.get_x());
-        assert_eq!(4, pos.get_y());
+        assert_eq!(-1, pos.x());
+        assert_eq!(4, pos.y());
     }
 
     #[test]
     fn new_negative_y_component_allowed() {
         let pos = Pos::new(1, -4);
-        assert_eq!(1, pos.get_x());
-        assert_eq!(-4, pos.get_y());
+        assert_eq!(1, pos.x());
+        assert_eq!(-4, pos.y());
     }
 
     #[test]
     fn new_negative_components_allowed() {
         let pos = Pos::new(-1, -4);
-        assert_eq!(-1, pos.get_x());
-        assert_eq!(-4, pos.get_y());
+        assert_eq!(-1, pos.x());
+        assert_eq!(-4, pos.y());
     }
 
     #[test]
@@ -115,8 +115,8 @@ mod tests {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(15, 5);
         let sum = pos1 + pos2;
-        assert_eq!(16, sum.get_x());
-        assert_eq!(9, sum.get_y());
+        assert_eq!(16, sum.x());
+        assert_eq!(9, sum.y());
     }
 
     #[test]
@@ -124,8 +124,8 @@ mod tests {
         let pos1 = Pos::new(-1, 4);
         let pos2 = Pos::new(15, 5);
         let sum = pos1 + pos2;
-        assert_eq!(14, sum.get_x());
-        assert_eq!(9, sum.get_y());
+        assert_eq!(14, sum.x());
+        assert_eq!(9, sum.y());
     }
 
     #[test]
@@ -133,8 +133,8 @@ mod tests {
         let pos1 = Pos::new(1, -4);
         let pos2 = Pos::new(15, 5);
         let sum = pos1 + pos2;
-        assert_eq!(16, sum.get_x());
-        assert_eq!(1, sum.get_y());
+        assert_eq!(16, sum.x());
+        assert_eq!(1, sum.y());
     }
 
     #[test]
@@ -142,8 +142,8 @@ mod tests {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(-15, 5);
         let sum = pos1 + pos2;
-        assert_eq!(-14, sum.get_x());
-        assert_eq!(9, sum.get_y());
+        assert_eq!(-14, sum.x());
+        assert_eq!(9, sum.y());
     }
 
     #[test]
@@ -151,8 +151,8 @@ mod tests {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(15, -5);
         let sum = pos1 + pos2;
-        assert_eq!(16, sum.get_x());
-        assert_eq!(-1, sum.get_y());
+        assert_eq!(16, sum.x());
+        assert_eq!(-1, sum.y());
     }
 
     #[test]
@@ -160,8 +160,8 @@ mod tests {
         let pos1 = Pos::new(-1, -4);
         let pos2 = Pos::new(-15, -5);
         let sum = pos1 + pos2;
-        assert_eq!(-16, sum.get_x());
-        assert_eq!(-9, sum.get_y());
+        assert_eq!(-16, sum.x());
+        assert_eq!(-9, sum.y());
     }
 
     #[test]
@@ -169,8 +169,8 @@ mod tests {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(15, 5);
         let diff = pos1 - pos2;
-        assert_eq!(-14, diff.get_x());
-        assert_eq!(-1, diff.get_y());
+        assert_eq!(-14, diff.x());
+        assert_eq!(-1, diff.y());
     }
 
     #[test]
@@ -178,8 +178,8 @@ mod tests {
         let pos1 = Pos::new(-1, 4);
         let pos2 = Pos::new(15, 5);
         let diff = pos1 - pos2;
-        assert_eq!(-16, diff.get_x());
-        assert_eq!(-1, diff.get_y());
+        assert_eq!(-16, diff.x());
+        assert_eq!(-1, diff.y());
     }
 
     #[test]
@@ -187,8 +187,8 @@ mod tests {
         let pos1 = Pos::new(1, -4);
         let pos2 = Pos::new(15, 5);
         let diff = pos1 - pos2;
-        assert_eq!(-14, diff.get_x());
-        assert_eq!(-9, diff.get_y());
+        assert_eq!(-14, diff.x());
+        assert_eq!(-9, diff.y());
     }
 
     #[test]
@@ -196,8 +196,8 @@ mod tests {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(-15, 5);
         let diff = pos1 - pos2;
-        assert_eq!(16, diff.get_x());
-        assert_eq!(-1, diff.get_y());
+        assert_eq!(16, diff.x());
+        assert_eq!(-1, diff.y());
     }
 
     #[test]
@@ -205,8 +205,8 @@ mod tests {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(15, -5);
         let diff = pos1 - pos2;
-        assert_eq!(-14, diff.get_x());
-        assert_eq!(9, diff.get_y());
+        assert_eq!(-14, diff.x());
+        assert_eq!(9, diff.y());
     }
 
     #[test]
@@ -214,8 +214,8 @@ mod tests {
         let pos1 = Pos::new(-1, -4);
         let pos2 = Pos::new(-15, -5);
         let diff = pos1 - pos2;
-        assert_eq!(14, diff.get_x());
-        assert_eq!(1, diff.get_y());
+        assert_eq!(14, diff.x());
+        assert_eq!(1, diff.y());
     }
 
     #[test]

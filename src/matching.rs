@@ -75,6 +75,10 @@ impl Match<'_> {
     /// `pattern_pos` - a position in the pattern to convert to its actual board position.
     ///                 This **must** be in the pattern. Otherwise, this method will panic
     ///                 as passing a non-pattern position is a bug.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `pattern_pos` is not in the pattern.
     pub fn convert_to_board_pos(&self, pattern_pos: Pos) -> Pos {
         *self.pattern_to_board_pos.get(&pattern_pos).expect(
             &*format!("The position {} is not in the pattern", pattern_pos)

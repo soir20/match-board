@@ -46,11 +46,10 @@ impl BitBoard {
 
     fn check_variant(grid: &Grid, pattern: Pattern, new_origin: Pos) -> Option<Pattern> {
         let grid_pos = BitBoard::change_origin(pattern, new_origin);
-        if grid_pos.iter().all(|&pos| is_set_in_grid(grid, pos)) {
-            return Some(grid_pos);
+        match grid_pos.iter().all(|&pos| is_set_in_grid(grid, pos)) {
+            true => Some(grid_pos),
+            false => None
         }
-
-        None
     }
 
     fn change_origin(pattern: Pattern, origin: Pos) -> Pattern {

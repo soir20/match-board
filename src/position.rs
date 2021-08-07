@@ -6,10 +6,10 @@ use std::fmt::{Display, Formatter};
 pub struct Pos {
 
     /// The horizontal component of the position
-    x: i32,
+    x: u32,
 
     /// The vertical component of the position
-    y: i32
+    y: u32
 
 }
 
@@ -21,17 +21,17 @@ impl Pos {
     ///
     /// * `x` - the horizontal component of the position
     /// * `y` - the vertical component of the position
-    pub fn new(x: i32, y: i32) -> Pos {
+    pub fn new(x: u32, y: u32) -> Pos {
         Pos { x, y }
     }
 
     /// Returns the horizontal component of the position.
-    pub fn x(&self) -> i32 {
+    pub fn x(&self) -> u32 {
         self.x
     }
 
     /// Returns the vertical component of the position.
-    pub fn y(&self) -> i32 {
+    pub fn y(&self) -> u32 {
         self.y
     }
 

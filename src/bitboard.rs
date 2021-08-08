@@ -192,7 +192,7 @@ impl MutableBitBoard {
     }
 
     fn is_within_board(pos: Pos) -> bool {
-        pos.x() >= 0 && pos.x() < BOARD_WIDTH as u32 && pos.y() >= 0
+        pos.x() >= 0 && pos.x() < BOARD_WIDTH as u32 && pos.y() >= 0 && pos.y() < BOARD_WIDTH as u32
     }
 
     fn move_pos_down_diagonally(pos: Pos, to_west: bool) -> Pos {

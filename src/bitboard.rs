@@ -64,7 +64,7 @@ impl BitBoard {
     }
 }
 
-pub(crate) struct MutableBitBoard {
+struct MutableBitBoard {
     pieces: Vec<Grid>,
     empty_pieces: Grid,
     movable_directions: [Grid; 4]

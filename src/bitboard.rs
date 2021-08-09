@@ -147,18 +147,15 @@ impl MutableBitBoard {
             for y in 0..BOARD_WIDTH {
                 let piece_pos = Pos::new(x, y);
 
-                let mut did_trickle = false;
-
                 let mut previous_trickled_pos = piece_pos;
                 let mut current_trickled_pos = self.trickle_piece(previous_trickled_pos);
+                if previous_trickled_pos != current_trickled_pos {
+                    self.trickle_column(x);
+                }
+
                 while previous_trickled_pos != current_trickled_pos {
                     previous_trickled_pos = current_trickled_pos;
                     current_trickled_pos = self.trickle_piece(previous_trickled_pos);
-                    did_trickle = true;
-                }
-
-                if did_trickle {
-                    self.trickle_column(x);
                 }
             }
         }

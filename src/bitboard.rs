@@ -8,7 +8,7 @@ type Pattern = HashSet<Pos>;
 type Grid = [u32; BOARD_WIDTH as usize];
 type PieceTypeId = usize;
 
-enum BitBoardPiece {
+pub enum BitBoardPiece {
     Regular(PieceTypeId, EnumSet<Direction>),
     Empty,
     Wall
@@ -83,10 +83,10 @@ impl BitBoard {
     }
 
     fn check_pattern(grid: &Grid, pattern: Pattern, pos: Pos) -> Option<Pattern> {
-        pattern.iter().find_map(|&original| BitBoard::check_variant(grid, pattern, pos - original))
+        pattern.iter().find_map(|&original| BitBoard::check_variant(grid, &pattern, pos - original))
     }
 
-    fn check_variant(grid: &Grid, pattern: Pattern, new_origin: Pos) -> Option<Pattern> {
+    fn check_variant(grid: &Grid, pattern: &Pattern, new_origin: Pos) -> Option<Pattern> {
         let grid_pos = BitBoard::change_origin(pattern, new_origin);
         match grid_pos.iter().all(|&pos| is_set_in_grid(grid, pos)) {
             true => Some(grid_pos),
@@ -94,7 +94,7 @@ impl BitBoard {
         }
     }
 
-    fn change_origin(pattern: Pattern, origin: Pos) -> Pattern {
+    fn change_origin(pattern: &Pattern, origin: Pos) -> Pattern {
         pattern.iter().map(|&original| original + origin).collect()
     }
 }
@@ -282,7 +282,7 @@ fn find_piece_type(pieces: &Vec<Grid>, pos: Pos) -> Option<PieceTypeId> {
 }
 
 fn is_within_board(pos: Pos) -> bool {
-    pos.x() >= 0 && pos.x() < BOARD_WIDTH && pos.y() >= 0 && pos.y() < BOARD_WIDTH
+    pos.x() < BOARD_WIDTH && pos.y() < BOARD_WIDTH
 }
 
 fn is_set_in_grid(grid: &Grid, pos: Pos) -> bool {

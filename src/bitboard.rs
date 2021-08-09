@@ -1,9 +1,9 @@
 use crate::position::Pos;
 use std::collections::{HashSet, VecDeque};
 
-const BOARD_WIDTH: usize = 32;
+const BOARD_WIDTH: u8 = 32;
 type Pattern = HashSet<Pos>;
-type Grid = [u32; BOARD_WIDTH];
+type Grid = [u32; BOARD_WIDTH as usize];
 
 #[derive(Clone)]
 pub(crate) struct BitBoard {
@@ -39,7 +39,7 @@ impl BitBoard {
 
     pub fn trickle(&self) -> BitBoard {
         let mut mutable_board = MutableBitBoard::from(self.clone());
-        for x in 0..self.pieces.len() {
+        for x in 0..BOARD_WIDTH {
             mutable_board.trickle_column(x);
         }
 
@@ -87,13 +87,14 @@ impl Into<BitBoard> for MutableBitBoard {
 }
 
 impl MutableBitBoard {
-    pub fn trickle_column(&mut self, x: usize) {
-        let empty_column = self.empty_pieces[x];
-        let movable_south = self.movable_directions[1][x];
+    pub fn trickle_column(&mut self, x: u8) {
+        let x_index = x as usize;
+        let empty_column = self.empty_pieces[x_index];
+        let movable_south = self.movable_directions[1][x_index];
 
         let mut empty_spaces = VecDeque::new();
 
-        for y in 0..BOARD_WIDTH as u32 {
+        for y in 0..BOARD_WIDTH as u8 {
             if is_set_in_column(empty_column, y) {
                 empty_spaces.push_back(y);
             } else if is_set_in_column(movable_south, y) {
@@ -107,16 +108,16 @@ impl MutableBitBoard {
     }
 
     pub fn trickle_diagonally(&mut self) {
-        for x in 0..BOARD_WIDTH as u32 {
-            for y in 0..BOARD_WIDTH as u32 {
+        for x in 0..BOARD_WIDTH as u8 {
+            for y in 0..BOARD_WIDTH as u8 {
                 self.trickle_piece_diagonally(x, y, true);
                 self.trickle_piece_diagonally(x, y, false);
             }
         }
     }
 
-    fn swap_piece_and_empty_in_column(&mut self, x: usize, piece_y: u32, empty_y: u32) {
-        let original_pos = Pos::new(x as u32, piece_y);
+    fn swap_piece_and_empty_in_column(&mut self, x: u8, piece_y: u8, empty_y: u8) {
+        let original_pos = Pos::new(x as u8, piece_y);
         let piece_type = self.find_piece_type(original_pos)
             .expect(&*format!("Piece does not exist at {}", original_pos));
 
@@ -130,7 +131,7 @@ impl MutableBitBoard {
         });
     }
 
-    fn trickle_piece_diagonally(&mut self, piece_x: u32, piece_y: u32, to_west: bool) {
+    fn trickle_piece_diagonally(&mut self, piece_x: u8, piece_y: u8, to_west: bool) {
         let mut piece_pos = Pos::new(piece_x, piece_y);
         let mut empty_pos = MutableBitBoard::move_pos_down_diagonally(piece_pos, to_west);
         let mut did_trickle = false;
@@ -146,7 +147,7 @@ impl MutableBitBoard {
         }
 
         if did_trickle {
-            self.trickle_column(piece_x as usize);
+            self.trickle_column(piece_x);
         }
     }
 
@@ -192,7 +193,7 @@ impl MutableBitBoard {
     }
 
     fn is_within_board(pos: Pos) -> bool {
-        pos.x() >= 0 && pos.x() < BOARD_WIDTH as u32 && pos.y() >= 0 && pos.y() < BOARD_WIDTH as u32
+        pos.x() >= 0 && pos.x() < BOARD_WIDTH as u8 && pos.y() >= 0 && pos.y() < BOARD_WIDTH as u8
     }
 
     fn move_pos_down_diagonally(pos: Pos, to_west: bool) -> Pos {
@@ -207,23 +208,23 @@ fn is_set_in_grid(grid: &Grid, pos: Pos) -> bool {
     is_set_in_column(grid[pos.x() as usize], pos.y())
 }
 
-fn is_set_in_column(column: u32, y: u32) -> bool {
+fn is_set_in_column(column: u32, y: u8) -> bool {
     (column >> y) & 1 == 1
 }
 
-fn flip_in_column(column: u32, y: u32) -> u32 {
+fn flip_in_column(column: u32, y: u8) -> u32 {
     column ^ (1 << y)
 }
 
-fn set_in_column(column: u32, y: u32) -> u32 {
+fn set_in_column(column: u32, y: u8) -> u32 {
     column | (1 << y)
 }
 
-fn unset_in_column(column: u32, y: u32) -> u32 {
+fn unset_in_column(column: u32, y: u8) -> u32 {
     column & !(1 << y)
 }
 
-fn swap_in_column(column: u32, from_y: u32, to_y: u32) -> u32 {
+fn swap_in_column(column: u32, from_y: u8, to_y: u8) -> u32 {
     let from_bit = (column >> from_y) & 1;
     let to_bit = (column >> to_y) & 1;
 
@@ -233,7 +234,7 @@ fn swap_in_column(column: u32, from_y: u32, to_y: u32) -> u32 {
     swapped_column | (from_bit >> to_y) | (to_bit >> from_y)
 }
 
-fn swap_across_columns(from_column: u32, to_column: u32, from_y: u32, to_y: u32) -> (u32, u32) {
+fn swap_across_columns(from_column: u32, to_column: u32, from_y: u8, to_y: u8) -> (u32, u32) {
     let from_bit = (from_column >> from_y) & 1;
     let to_bit = (to_column >> to_y) & 1;
 

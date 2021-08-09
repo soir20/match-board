@@ -1,11 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashSet};
 use crate::position::Pos;
-use crate::piece::PieceType;
 
 /// A pattern of piece types that represents a valid match on a board.
 #[derive(Debug, Eq, PartialEq)]
 pub struct MatchPattern {
-    spaces: HashMap<Pos, PieceType>,
+    spaces: HashSet<Pos>,
     rank: u32
 }
 
@@ -19,12 +18,12 @@ impl MatchPattern {
     ///                       do not matter: only their relative positions matter.
     /// * `rank`            - the rank of a match. A higher ranked match takes precedence over
     ///                       a lower ranked one.
-    pub fn new(spaces_to_types: HashMap<Pos, PieceType>, rank: u32) -> MatchPattern {
-        MatchPattern { spaces: spaces_to_types, rank }
+    pub fn new(spaces: HashSet<Pos>, rank: u32) -> MatchPattern {
+        MatchPattern { spaces, rank }
     }
 
-    /// Gets the relative position to type mapping for this pattern.
-    pub fn spaces(&self) -> &HashMap<Pos, PieceType> {
+    /// Gets the relative position list for this pattern.
+    pub fn spaces(&self) -> &HashSet<Pos> {
         &self.spaces
     }
 
@@ -40,7 +39,7 @@ impl MatchPattern {
 pub struct Match<'a> {
     pattern: &'a MatchPattern,
     changed_pos: Pos,
-    pattern_to_board_pos: HashMap<Pos, Pos>
+    board_pos: HashSet<Pos>
 }
 
 impl Match<'_> {
@@ -53,9 +52,8 @@ impl Match<'_> {
     /// * `changed_pos` - the position that was changed and triggered the match
     /// * `pattern_to_board_pos` - a mapping from relative positions in the pattern to
     ///                            actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos,
-                      pattern_to_board_pos: HashMap<Pos, Pos>) -> Match {
-        Match { pattern, changed_pos, pattern_to_board_pos }
+    pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos, board_pos: HashSet<Pos>) -> Match {
+        Match { pattern, changed_pos, board_pos }
     }
 
     /// Gets the pattern associated with this match.
@@ -68,21 +66,9 @@ impl Match<'_> {
         self.changed_pos
     }
 
-    /// Converts a relative position in the pattern to its actual position on the board.
-    ///
-    /// # Arguments
-    ///
-    /// `pattern_pos` - a position in the pattern to convert to its actual board position.
-    ///                 This **must** be in the pattern. Otherwise, this method will panic
-    ///                 as passing a non-pattern position is a bug.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `pattern_pos` is not in the pattern.
-    pub fn convert_to_board_pos(&self, pattern_pos: Pos) -> Pos {
-        *self.pattern_to_board_pos.get(&pattern_pos).expect(
-            &*format!("The position {} is not in the pattern", pattern_pos)
-        )
+    /// Gets all of the board positions where this pattern is located.
+    pub fn board_pos(&self) -> &HashSet<Pos> {
+        &self.board_pos
     }
 
 }
@@ -90,110 +76,100 @@ impl Match<'_> {
 #[cfg(test)]
 mod tests {
     use crate::matching::{MatchPattern, Match};
-    use std::collections::HashMap;
-    use crate::piece::PieceType;
+    use std::collections::{HashSet};
     use crate::position::Pos;
 
     #[test]
-    fn new_pattern_empty_map_works() {
-        let spaces_to_types = HashMap::new();
-        let pattern = MatchPattern::new(spaces_to_types, 10);
+    fn new_pattern_empty_set_works() {
+        let spaces = HashSet::new();
+        let pattern = MatchPattern::new(spaces, 10);
         assert!(pattern.spaces().is_empty());
     }
 
     #[test]
-    fn new_pattern_filled_map_works() {
-        let mut spaces_to_types = HashMap::new();
-        spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
-        spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));
-        spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
+    fn new_pattern_filled_set_works() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces_to_types, 10);
-        assert_eq!(3, pattern.spaces().len());
-        assert_eq!(&PieceType::new("first"), pattern.spaces().get(&Pos::new(0, 1)).unwrap());
-        assert_eq!(&PieceType::new("second"), pattern.spaces().get(&Pos::new(1, 0)).unwrap());
-        assert_eq!(&PieceType::new("first"), pattern.spaces().get(&Pos::new(5, 5)).unwrap());
+        let pattern = MatchPattern::new(spaces, 10);
+
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
+
+        assert_eq!(expected_spaces, *pattern.spaces());
     }
 
     #[test]
     fn new_pattern_created_with_rank_has_rank() {
-        let mut spaces_to_types = HashMap::new();
-        spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
-        spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));
-        spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces_to_types, 10);
+        let pattern = MatchPattern::new(spaces, 10);
         assert_eq!(10, pattern.rank());
     }
 
     #[test]
     fn new_match_created_with_pattern_has_pattern() {
-        let mut spaces_to_types = HashMap::new();
-        spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
-        spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));
-        spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
-        let pattern = MatchPattern::new(spaces_to_types, 10);
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
 
-        let mut pattern_to_board = HashMap::new();
-        pattern_to_board.insert(Pos::new(0, 1) , Pos::new(5, -1));
-        pattern_to_board.insert(Pos::new(1, 0), Pos::new(6, -2));
-        pattern_to_board.insert(Pos::new(5, 5), Pos::new(10, 3));
+        let pattern = MatchPattern::new(spaces, 10);
 
-        let match1 = Match::new(&pattern, Pos::new(6, -2), pattern_to_board);
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
+
+        let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
         assert_eq!(pattern, *match1.pattern());
     }
 
     #[test]
     fn new_match_created_with_changed_pos_has_changed_pos() {
-        let mut spaces_to_types = HashMap::new();
-        spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
-        spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));
-        spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
-        let pattern = MatchPattern::new(spaces_to_types, 10);
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
 
-        let mut pattern_to_board = HashMap::new();
-        pattern_to_board.insert(Pos::new(0, 1) , Pos::new(5, -1));
-        pattern_to_board.insert(Pos::new(1, 0), Pos::new(6, -2));
-        pattern_to_board.insert(Pos::new(5, 5), Pos::new(10, 3));
+        let pattern = MatchPattern::new(spaces, 10);
 
-        let match1 = Match::new(&pattern, Pos::new(6, -2), pattern_to_board);
-        assert_eq!(Pos::new(6, -2), match1.changed_pos());
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
+
+        let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
+        assert_eq!(Pos::new(6, 0), match1.changed_pos());
     }
 
     #[test]
-    fn convert_to_board_pos_in_pattern_gets_board_pos() {
-        let mut spaces_to_types = HashMap::new();
-        spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
-        spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));
-        spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
-        let pattern = MatchPattern::new(spaces_to_types, 10);
+    fn new_match_created_with_board_pos_has_board_pos() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
 
-        let mut pattern_to_board = HashMap::new();
-        pattern_to_board.insert(Pos::new(0, 1) , Pos::new(5, -1));
-        pattern_to_board.insert(Pos::new(1, 0), Pos::new(6, -2));
-        pattern_to_board.insert(Pos::new(5, 5), Pos::new(10, 3));
+        let pattern = MatchPattern::new(spaces, 10);
 
-        let match1 = Match::new(&pattern, Pos::new(6, -2), pattern_to_board);
-        assert_eq!(Pos::new(5, -1), match1.convert_to_board_pos(Pos::new(0, 1)));
-        assert_eq!(Pos::new(6, -2), match1.convert_to_board_pos(Pos::new(1, 0)));
-        assert_eq!(Pos::new(10, 3), match1.convert_to_board_pos(Pos::new(5, 5)));
-    }
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
 
-    #[test]
-    #[should_panic]
-    fn convert_to_board_pos_not_in_pattern_panics() {
-        let mut spaces_to_types = HashMap::new();
-        spaces_to_types.insert(Pos::new(0, 1), PieceType::new("first"));
-        spaces_to_types.insert(Pos::new(1, 0), PieceType::new("second"));
-        spaces_to_types.insert(Pos::new(5, 5), PieceType::new("first"));
-        let pattern = MatchPattern::new(spaces_to_types, 10);
+        let mut expected_board_pos = HashSet::new();
+        expected_board_pos.insert(Pos::new(5, 1));
+        expected_board_pos.insert(Pos::new(6, 0));
+        expected_board_pos.insert(Pos::new(10, 5));
 
-        let mut pattern_to_board = HashMap::new();
-        pattern_to_board.insert(Pos::new(0, 1) , Pos::new(5, -1));
-        pattern_to_board.insert(Pos::new(1, 0), Pos::new(6, -2));
-        pattern_to_board.insert(Pos::new(5, 5), Pos::new(10, 3));
-
-        let match1 = Match::new(&pattern, Pos::new(6, -2), pattern_to_board);
-        match1.convert_to_board_pos(Pos::new(1, 1));
+        let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
+        assert_eq!(expected_board_pos, *match1.board_pos());
     }
 }

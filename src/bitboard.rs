@@ -1,9 +1,18 @@
 use crate::position::Pos;
 use std::collections::{HashSet, VecDeque};
+use crate::piece::{Direction, ALL_DIRECTIONS};
+use enumset::EnumSet;
 
 const BOARD_WIDTH: u8 = 32;
 type Pattern = HashSet<Pos>;
 type Grid = [u32; BOARD_WIDTH as usize];
+type PieceTypeId = usize;
+
+enum BitBoardPiece {
+    Regular(PieceTypeId, EnumSet<Direction>),
+    Empty,
+    Wall
+}
 
 #[derive(Clone)]
 pub(crate) struct BitBoard {
@@ -32,7 +41,33 @@ impl BitBoard {
         BitBoard { pieces, empty_pieces, movable_directions }
     }
 
-    pub fn find_match(&self, piece_type: usize, patterns: Vec<Pattern>, pos: Pos) -> Option<Pattern> {
+    pub fn piece(&self, pos: Pos) -> BitBoardPiece {
+        if !is_within_board(pos) {
+            return BitBoardPiece::Wall;
+        }
+
+        let x_index = pos.x() as usize;
+        if is_set_in_column(self.empty_pieces[x_index], pos.y()) {
+            return BitBoardPiece::Empty;
+        }
+
+        match find_piece_type(&self.pieces, pos) {
+            None => BitBoardPiece::Wall,
+            Some(piece_type) => {
+                let mut movable_directions = EnumSet::new();
+
+                for direction in ALL_DIRECTIONS {
+                    if is_set_in_column(self.movable_directions[direction.value()][x_index], pos.y()) {
+                        movable_directions.insert(direction);
+                    }
+                }
+
+                BitBoardPiece::Regular(piece_type, movable_directions)
+            }
+        }
+    }
+
+    pub fn find_match(&self, piece_type: PieceTypeId, patterns: Vec<Pattern>, pos: Pos) -> Option<Pattern> {
         let grid = self.pieces.get(piece_type).expect("Unknown piece type");
         patterns.into_iter().find_map(|pattern| BitBoard::check_pattern(grid, pattern, pos))
     }
@@ -90,7 +125,7 @@ impl MutableBitBoard {
     pub fn trickle_column(&mut self, x: u8) {
         let x_index = x as usize;
         let empty_column = self.empty_pieces[x_index];
-        let movable_south = self.movable_directions[1][x_index];
+        let movable_south = self.movable_directions[Direction::South.value()][x_index];
 
         let mut empty_spaces = VecDeque::new();
 
@@ -132,7 +167,7 @@ impl MutableBitBoard {
     fn swap_piece_and_empty_in_column(&mut self, x: u8, piece_y: u8, empty_y: u8) {
         let x_index = x as usize;
         let original_pos = Pos::new(x, piece_y);
-        let piece_type = self.find_piece_type(original_pos)
+        let piece_type = find_piece_type(&self.pieces, original_pos)
             .expect(&*format!("Piece does not exist at {}", original_pos));
 
         let type_grid = self.pieces.get_mut(piece_type).expect("Found type doesn't exist");
@@ -161,17 +196,17 @@ impl MutableBitBoard {
         let mut empty_pos = MutableBitBoard::move_pos_down_diagonally(piece_pos, to_west);
 
         let horizontal_dir_col = match to_west {
-            true => self.movable_directions[3][original_x],
-            false => self.movable_directions[2][original_x]
+            true => self.movable_directions[Direction::West.value()][original_x],
+            false => self.movable_directions[Direction::East.value()][original_x]
         };
-        let vertical_dir_col = self.movable_directions[1][original_x as usize];
+        let vertical_dir_col = self.movable_directions[Direction::South.value()][original_x as usize];
 
         if !is_set_in_column(horizontal_dir_col, current_pos.y()) ||
             !is_set_in_column(vertical_dir_col, current_pos.y()) {
             return piece_pos;
         }
 
-        while MutableBitBoard::is_within_board(empty_pos)
+        while is_within_board(empty_pos)
             && is_set_in_column(self.empty_pieces[empty_pos.x() as usize], empty_pos.y()) {
 
             self.swap_piece_and_empty_across_columns(piece_pos, empty_pos);
@@ -186,7 +221,7 @@ impl MutableBitBoard {
     fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
         let x_index = piece_pos.x() as usize;
 
-        let vertical_dir_col = self.movable_directions[1][x_index as usize];
+        let vertical_dir_col = self.movable_directions[Direction::South.value()][x_index as usize];
         if !is_set_in_column(vertical_dir_col, piece_pos.y()) {
             return piece_pos;
         }
@@ -204,7 +239,7 @@ impl MutableBitBoard {
         let piece_x = piece.x() as usize;
         let empty_x = empty.x() as usize;
 
-        let piece_type = self.find_piece_type(piece)
+        let piece_type = find_piece_type(&self.pieces, piece)
             .expect(&*format!("Piece does not exist at {}", piece));
         let type_grid = self.pieces.get_mut(piece_type).expect("Found type doesn't exist");
 
@@ -232,25 +267,25 @@ impl MutableBitBoard {
         });
     }
 
-    fn find_piece_type(&self, pos: Pos) -> Option<usize> {
-        self.pieces.iter().enumerate().find_map(|(index, grid)|
-            match is_set_in_grid(grid, pos) {
-                true => Some(index),
-                false => None
-            }
-        )
-    }
-
-    fn is_within_board(pos: Pos) -> bool {
-        pos.x() >= 0 && pos.x() < BOARD_WIDTH && pos.y() >= 0 && pos.y() < BOARD_WIDTH
-    }
-
     fn move_pos_down_diagonally(pos: Pos, to_west: bool) -> Pos {
         match to_west {
             true => Pos::new(pos.x() - 1, pos.y() - 1),
             false => Pos::new(pos.x() + 1, pos.y() - 1)
         }
     }
+}
+
+fn find_piece_type(pieces: &Vec<Grid>, pos: Pos) -> Option<PieceTypeId> {
+    pieces.iter().enumerate().find_map(|(index, grid)|
+        match is_set_in_grid(grid, pos) {
+            true => Some(index),
+            false => None
+        }
+    )
+}
+
+fn is_within_board(pos: Pos) -> bool {
+    pos.x() >= 0 && pos.x() < BOARD_WIDTH && pos.y() >= 0 && pos.y() < BOARD_WIDTH
 }
 
 fn is_set_in_grid(grid: &Grid, pos: Pos) -> bool {

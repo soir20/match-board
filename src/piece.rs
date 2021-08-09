@@ -23,12 +23,27 @@ impl PieceType {
 /// A direction that a piece could move.
 #[derive(EnumSetType)]
 pub enum Direction {
-    North,
-    South,
-    East,
-    West
+    North = 0,
+    South = 1,
+    East = 2,
+    West = 3
 }
-const ALL_DIRECTIONS: EnumSet<Direction> = enum_set!(
+
+impl Direction {
+
+    /// Converts the enum to a unique numerical value.
+    pub fn value(&self) -> usize {
+        match *self {
+            Direction::North => 0,
+            Direction::South => 1,
+            Direction::East => 2,
+            Direction::West => 3
+        }
+    }
+
+}
+
+pub const ALL_DIRECTIONS: EnumSet<Direction> = enum_set!(
     Direction::North | Direction::South | Direction::East | Direction::West
 );
 

@@ -46,7 +46,7 @@ impl BitBoard {
             return BitBoardPiece::Wall;
         }
 
-        let x_index = pos.x() as usize;
+        let x_index = usize::from(pos.x());
         if is_set_in_column(self.empty_pieces[x_index], pos.y()) {
             return BitBoardPiece::Empty;
         }
@@ -123,7 +123,7 @@ impl Into<BitBoard> for MutableBitBoard {
 
 impl MutableBitBoard {
     pub fn trickle_column(&mut self, x: u8) {
-        let x_index = x as usize;
+        let x_index = usize::from(x);
         let empty_column = self.empty_pieces[x_index];
         let movable_south = self.movable_directions[Direction::South.value()][x_index];
 
@@ -162,7 +162,7 @@ impl MutableBitBoard {
     }
 
     fn swap_piece_and_empty_in_column(&mut self, x: u8, piece_y: u8, empty_y: u8) {
-        let x_index = x as usize;
+        let x_index = usize::from(x);
         let original_pos = Pos::new(x, piece_y);
         let piece_type = find_piece_type(&self.pieces, original_pos)
             .expect(&*format!("Piece does not exist at {}", original_pos));
@@ -187,7 +187,7 @@ impl MutableBitBoard {
     }
 
     fn trickle_piece_diagonally(&mut self, current_pos: Pos, to_west: bool) -> Pos {
-        let original_x = current_pos.x() as usize;
+        let original_x = usize::from(current_pos.x());
 
         let mut piece_pos = current_pos;
         let mut empty_pos = MutableBitBoard::move_pos_down_diagonally(piece_pos, to_west);
@@ -196,7 +196,7 @@ impl MutableBitBoard {
             true => self.movable_directions[Direction::West.value()][original_x],
             false => self.movable_directions[Direction::East.value()][original_x]
         };
-        let vertical_dir_col = self.movable_directions[Direction::South.value()][original_x as usize];
+        let vertical_dir_col = self.movable_directions[Direction::South.value()][original_x];
 
         if !is_set_in_column(horizontal_dir_col, current_pos.y()) ||
             !is_set_in_column(vertical_dir_col, current_pos.y()) {
@@ -204,7 +204,7 @@ impl MutableBitBoard {
         }
 
         while is_within_board(empty_pos)
-            && is_set_in_column(self.empty_pieces[empty_pos.x() as usize], empty_pos.y()) {
+            && is_set_in_column(self.empty_pieces[usize::from(empty_pos.x())], empty_pos.y()) {
 
             self.swap_piece_and_empty_across_columns(piece_pos, empty_pos);
             piece_pos = empty_pos;
@@ -216,9 +216,9 @@ impl MutableBitBoard {
     }
 
     fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
-        let x_index = piece_pos.x() as usize;
+        let x_index = usize::from(piece_pos.x());
 
-        let vertical_dir_col = self.movable_directions[Direction::South.value()][x_index as usize];
+        let vertical_dir_col = self.movable_directions[Direction::South.value()][usize::from(x_index)];
         if !is_set_in_column(vertical_dir_col, piece_pos.y()) {
             return piece_pos;
         }
@@ -233,8 +233,8 @@ impl MutableBitBoard {
     }
 
     fn swap_piece_and_empty_across_columns(&mut self, piece: Pos, empty: Pos) {
-        let piece_x = piece.x() as usize;
-        let empty_x = empty.x() as usize;
+        let piece_x = usize::from(piece.x());
+        let empty_x = usize::from(empty.x());
 
         let piece_type = find_piece_type(&self.pieces, piece)
             .expect(&*format!("Piece does not exist at {}", piece));
@@ -286,7 +286,7 @@ fn is_within_board(pos: Pos) -> bool {
 }
 
 fn is_set_in_grid(grid: &Grid, pos: Pos) -> bool {
-    is_set_in_column(grid[pos.x() as usize], pos.y())
+    is_set_in_column(grid[usize::from(pos.x())], pos.y())
 }
 
 fn is_set_in_column(column: u32, y: u8) -> bool {

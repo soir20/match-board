@@ -110,8 +110,21 @@ impl MutableBitBoard {
     pub fn trickle_diagonally(&mut self) {
         for x in 0..BOARD_WIDTH {
             for y in 0..BOARD_WIDTH {
-                self.trickle_piece_diagonally(x, y, true);
-                self.trickle_piece_diagonally(x, y, false);
+                let piece_pos = Pos::new(x, y);
+
+                let mut did_trickle = false;
+
+                let mut previous_trickled_pos = piece_pos;
+                let mut current_trickled_pos = self.trickle_piece(previous_trickled_pos);
+                while previous_trickled_pos != current_trickled_pos {
+                    previous_trickled_pos = current_trickled_pos;
+                    current_trickled_pos = self.trickle_piece(previous_trickled_pos);
+                    did_trickle = true;
+                }
+
+                if did_trickle {
+                    self.trickle_column(x);
+                }
             }
         }
     }
@@ -132,24 +145,59 @@ impl MutableBitBoard {
         });
     }
 
-    fn trickle_piece_diagonally(&mut self, piece_x: u8, piece_y: u8, to_west: bool) {
-        let mut piece_pos = Pos::new(piece_x, piece_y);
+    fn trickle_piece(&mut self, piece_pos: Pos) -> Pos {
+        let mut diagonally_trickled_pos = self.trickle_piece_diagonally(piece_pos, true);
+        if diagonally_trickled_pos == piece_pos {
+            diagonally_trickled_pos = self.trickle_piece_diagonally(piece_pos, false);
+        }
+
+        self.trickle_piece_down(diagonally_trickled_pos)
+    }
+
+    fn trickle_piece_diagonally(&mut self, current_pos: Pos, to_west: bool) -> Pos {
+        let original_x = current_pos.x() as usize;
+
+        let mut piece_pos = current_pos;
         let mut empty_pos = MutableBitBoard::move_pos_down_diagonally(piece_pos, to_west);
-        let mut did_trickle = false;
+
+        let horizontal_dir_col = match to_west {
+            true => self.movable_directions[3][original_x],
+            false => self.movable_directions[2][original_x]
+        };
+        let vertical_dir_col = self.movable_directions[1][original_x as usize];
+
+        if !is_set_in_column(horizontal_dir_col, current_pos.y()) ||
+            !is_set_in_column(vertical_dir_col, current_pos.y()) {
+            return piece_pos;
+        }
 
         while MutableBitBoard::is_within_board(empty_pos)
             && is_set_in_column(self.empty_pieces[empty_pos.x() as usize], empty_pos.y()) {
 
             self.swap_piece_and_empty_across_columns(piece_pos, empty_pos);
             piece_pos = empty_pos;
+
             empty_pos = MutableBitBoard::move_pos_down_diagonally(piece_pos, to_west);
-
-            did_trickle = true;
         }
 
-        if did_trickle {
-            self.trickle_column(piece_x);
+        piece_pos
+    }
+
+    fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
+        let x_index = piece_pos.x() as usize;
+
+        let vertical_dir_col = self.movable_directions[1][x_index as usize];
+        if !is_set_in_column(vertical_dir_col, piece_pos.y()) {
+            return piece_pos;
         }
+
+        let mut next_y = piece_pos.y();
+        while next_y > 0 && is_set_in_column(self.empty_pieces[x_index], next_y - 1) {
+            next_y -= 1;
+        }
+        self.swap_piece_and_empty_in_column(piece_pos.x(), piece_pos.y(), next_y);
+
+        Pos::new(piece_pos.x(), next_y)
     }
 
     fn swap_piece_and_empty_across_columns(&mut self, piece: Pos, empty: Pos) {

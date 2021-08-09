@@ -45,6 +45,10 @@ impl Add for Pos {
     /// # Arguments
     ///
     /// * `rhs` - the "right-hand side" of the addition and the other point to sum
+    ///
+    /// # Panics
+    ///
+    /// Panics in debug move if the 8-bit integer limit is overflowed.
     fn add(self, rhs: Self) -> Self::Output {
         Pos {x: self.x + rhs.x, y: self.y + rhs.y}
     }
@@ -59,6 +63,11 @@ impl Sub for Pos {
     /// # Arguments
     ///
     /// * `rhs` - the "right-hand side" of the subtraction and the point to subtract from this point
+    ///
+    /// # Panics
+    ///
+    /// Subtraction will normally panic in debug mode if there is integer overflow, so the
+    /// components of self should be larger than those of the right hand side.
     fn sub(self, rhs: Self) -> Self::Output {
         Pos {x: self.x - rhs.x, y: self.y - rhs.y}
     }
@@ -90,27 +99,6 @@ mod tests {
     }
 
     #[test]
-    fn new_negative_x_component_allowed() {
-        let pos = Pos::new(-1, 4);
-        assert_eq!(-1, pos.x());
-        assert_eq!(4, pos.y());
-    }
-
-    #[test]
-    fn new_negative_y_component_allowed() {
-        let pos = Pos::new(1, -4);
-        assert_eq!(1, pos.x());
-        assert_eq!(-4, pos.y());
-    }
-
-    #[test]
-    fn new_negative_components_allowed() {
-        let pos = Pos::new(-1, -4);
-        assert_eq!(-1, pos.x());
-        assert_eq!(-4, pos.y());
-    }
-
-    #[test]
     fn add_positive_components_summed() {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(15, 5);
@@ -120,100 +108,10 @@ mod tests {
     }
 
     #[test]
-    fn add_negative_first_x_component_summed() {
-        let pos1 = Pos::new(-1, 4);
-        let pos2 = Pos::new(15, 5);
-        let sum = pos1 + pos2;
-        assert_eq!(14, sum.x());
-        assert_eq!(9, sum.y());
-    }
-
-    #[test]
-    fn add_negative_first_y_component_summed() {
-        let pos1 = Pos::new(1, -4);
-        let pos2 = Pos::new(15, 5);
-        let sum = pos1 + pos2;
-        assert_eq!(16, sum.x());
-        assert_eq!(1, sum.y());
-    }
-
-    #[test]
-    fn add_negative_second_x_component_summed() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(-15, 5);
-        let sum = pos1 + pos2;
-        assert_eq!(-14, sum.x());
-        assert_eq!(9, sum.y());
-    }
-
-    #[test]
-    fn add_negative_second_y_component_summed() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(15, -5);
-        let sum = pos1 + pos2;
-        assert_eq!(16, sum.x());
-        assert_eq!(-1, sum.y());
-    }
-
-    #[test]
-    fn add_negative_all_components_summed() {
-        let pos1 = Pos::new(-1, -4);
-        let pos2 = Pos::new(-15, -5);
-        let sum = pos1 + pos2;
-        assert_eq!(-16, sum.x());
-        assert_eq!(-9, sum.y());
-    }
-
-    #[test]
     fn sub_positive_components_subtracted() {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(15, 5);
-        let diff = pos1 - pos2;
-        assert_eq!(-14, diff.x());
-        assert_eq!(-1, diff.y());
-    }
-
-    #[test]
-    fn sub_negative_first_x_component_subtracted() {
-        let pos1 = Pos::new(-1, 4);
-        let pos2 = Pos::new(15, 5);
-        let diff = pos1 - pos2;
-        assert_eq!(-16, diff.x());
-        assert_eq!(-1, diff.y());
-    }
-
-    #[test]
-    fn sub_negative_first_y_component_subtracted() {
-        let pos1 = Pos::new(1, -4);
-        let pos2 = Pos::new(15, 5);
-        let diff = pos1 - pos2;
-        assert_eq!(-14, diff.x());
-        assert_eq!(-9, diff.y());
-    }
-
-    #[test]
-    fn sub_negative_second_x_component_subtracted() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(-15, 5);
-        let diff = pos1 - pos2;
-        assert_eq!(16, diff.x());
-        assert_eq!(-1, diff.y());
-    }
-
-    #[test]
-    fn sub_negative_second_y_component_subtracted() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(15, -5);
-        let diff = pos1 - pos2;
-        assert_eq!(-14, diff.x());
-        assert_eq!(9, diff.y());
-    }
-
-    #[test]
-    fn sub_negative_all_components_subtracted() {
-        let pos1 = Pos::new(-1, -4);
-        let pos2 = Pos::new(-15, -5);
-        let diff = pos1 - pos2;
+        let diff = pos2 - pos1;
         assert_eq!(14, diff.x());
         assert_eq!(1, diff.y());
     }
@@ -226,27 +124,6 @@ mod tests {
     }
 
     #[test]
-    fn equals_both_signs_diff_not_equal() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(-1, -4);
-        assert_ne!(pos1, pos2);
-    }
-
-    #[test]
-    fn equals_x_signs_diff_not_equal() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(-1, 4);
-        assert_ne!(pos1, pos2);
-    }
-
-    #[test]
-    fn equals_y_signs_diff_not_equal() {
-        let pos1 = Pos::new(1, 4);
-        let pos2 = Pos::new(1, -4);
-        assert_ne!(pos1, pos2);
-    }
-
-    #[test]
     fn equals_components_diff_not_equal() {
         let pos1 = Pos::new(1, 4);
         let pos2 = Pos::new(0, 15);
@@ -254,26 +131,15 @@ mod tests {
     }
 
     #[test]
+    fn equals_components_reversed_not_equal() {
+        let pos1 = Pos::new(1, 4);
+        let pos2 = Pos::new(4, 1);
+        assert_ne!(pos1, pos2);
+    }
+
+    #[test]
     fn format_positive_components_no_signs() {
         let pos = Pos::new(1, 4);
         assert_eq!("(1, 4)", format!("{}", pos));
-    }
-
-    #[test]
-    fn format_negative_x_component_correct_signs() {
-        let pos = Pos::new(-1, 4);
-        assert_eq!("(-1, 4)", format!("{}", pos));
-    }
-
-    #[test]
-    fn format_negative_y_component_correct_signs() {
-        let pos = Pos::new(1, -4);
-        assert_eq!("(1, -4)", format!("{}", pos));
-    }
-
-    #[test]
-    fn format_negative_components_signs() {
-        let pos = Pos::new(-1, -4);
-        assert_eq!("(-1, -4)", format!("{}", pos));
     }
 }

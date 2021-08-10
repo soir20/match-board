@@ -8,7 +8,7 @@ type Pattern = HashSet<Pos>;
 type Grid = [u32; BOARD_WIDTH as usize];
 type PieceTypeId = usize;
 
-pub enum BitBoardPiece {
+pub(crate) enum BitBoardPiece {
     Regular(PieceTypeId, EnumSet<Direction>),
     Empty,
     Wall

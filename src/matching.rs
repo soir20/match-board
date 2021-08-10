@@ -1,7 +1,7 @@
 use std::collections::{HashSet};
 use crate::position::Pos;
 
-/// A pattern of piece types that represents a valid match on a board.
+/// A pattern of piece positions that represents a valid match on a board.
 #[derive(Debug, Eq, PartialEq)]
 pub struct MatchPattern {
     spaces: HashSet<Pos>,
@@ -14,10 +14,11 @@ impl MatchPattern {
     ///
     /// # Arguments
     ///
-    /// * `spaces_to_types` - a mapping of positions to piece types. The values of the positions
-    ///                       do not matter: only their relative positions matter.
-    /// * `rank`            - the rank of a match. A higher ranked match takes precedence over
-    ///                       a lower ranked one.
+    /// * `spaces` - a set of unique positions that represents a pattern.
+    ///              The values of the positions do not matter: only their
+    ///              relative positions matter.
+    /// * `rank`    - the rank of a match. A higher ranked match takes precedence over
+    ///               a lower ranked one.
     pub fn new(spaces: HashSet<Pos>, rank: u32) -> MatchPattern {
         MatchPattern { spaces, rank }
     }
@@ -50,8 +51,7 @@ impl Match<'_> {
     ///
     /// * `pattern` - the pattern of the found match
     /// * `changed_pos` - the position that was changed and triggered the match
-    /// * `pattern_to_board_pos` - a mapping from relative positions in the pattern to
-    ///                            actual positions on the board
+    /// * `board_pos` - actual positions on the board
     pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos, board_pos: HashSet<Pos>) -> Match {
         Match { pattern, changed_pos, board_pos }
     }

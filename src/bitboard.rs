@@ -83,7 +83,7 @@ impl BitBoard {
         let mut empty_pieces = self.empty_pieces;
         let mut movable_directions = self.movable_directions;
 
-        let x_index = pos.x() as usize;
+        let x_index = usize::from(pos.x());
 
         match piece {
             BitBoardPiece::Regular(piece_type, directions) => {
@@ -358,7 +358,7 @@ fn swap_across_columns(from_column: u32, to_column: u32, from_y: u8, to_y: u8) -
 }
 
 fn set_movable_directions(direction_grid: &mut [Grid; 4], pos: Pos, movable_directions: EnumSet<Direction>) {
-    let x_index = pos.x() as usize;
+    let x_index = usize::from(pos.x());
 
     for direction in ALL_DIRECTIONS {
         let is_movable = movable_directions.contains(direction);

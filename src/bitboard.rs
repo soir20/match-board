@@ -195,7 +195,7 @@ impl MutableBitBoard {
         let x_index = usize::from(x);
         let original_pos = Pos::new(x, piece_y);
         let piece_type = find_piece_type(&self.pieces, original_pos)
-            .expect(&*format!("Piece does not exist at {}", original_pos));
+            .expect(&format!("Piece does not exist at {}", original_pos));
 
         let type_grid = self.pieces.get_mut(piece_type).expect("Found type doesn't exist");
         type_grid[x_index] = swap_in_column(type_grid[x_index], piece_y, empty_y);
@@ -267,7 +267,7 @@ impl MutableBitBoard {
         let empty_x = usize::from(empty.x());
 
         let piece_type = find_piece_type(&self.pieces, piece)
-            .expect(&*format!("Piece does not exist at {}", piece));
+            .expect(&format!("Piece does not exist at {}", piece));
         let type_grid = self.pieces.get_mut(piece_type).expect("Found type doesn't exist");
 
         let swapped_type_columns = swap_across_columns(

@@ -42,7 +42,9 @@ impl Board {
         }
     }
 
-    /// Gets a piece at the given position on the board if one is present.
+    /// Gets a piece at the given position on the board. If the position is
+    /// outside the board, a wall is returned. By default, all pieces on the
+    /// board are walls.
     ///
     /// # Arguments
     ///
@@ -96,9 +98,9 @@ impl Board {
         true
     }
 
-    /// Replaces a piece at the given position and returns the previous piece
-    /// if one was present. The space is marked as needing a match check. Swap
-    /// rules do not apply and the replacement is always successful.
+    /// Replaces a piece at the given position and returns the previous piece.
+    /// The space is marked as needing a match check. Swap rules do not apply
+    /// and the replacement is always successful.
     ///
     /// # Arguments
     ///
@@ -149,9 +151,18 @@ impl Board {
         next_match
     }
 
+    /// Gets the ID of a piece type that is used by the bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// * `piece_type` - the piece type to get the bitboard ID of
+    ///
+    /// # Panics
+    ///
+    /// Panics if the piece type is not known to this board.
     fn piece_type_id(&self, piece_type: PieceType) -> PieceTypeId {
         self.piece_types.iter().position(|&next_type| piece_type == next_type)
-            .expect("Piece type not registered with game")
+            .expect(&format!("The piece type \"{:?}\" is not registered with the game", piece_type))
     }
 
     /// Checks if the pieces at two positions on the board are both movable in the

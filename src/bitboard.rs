@@ -4,7 +4,7 @@ use crate::piece::{Direction, ALL_DIRECTIONS};
 use enumset::EnumSet;
 
 const BOARD_WIDTH: u8 = 32;
-pub type Pattern = HashSet<Pos>;
+pub type PosSet = HashSet<Pos>;
 pub(crate) type PieceTypeId = usize;
 type Grid = [u32; BOARD_WIDTH as usize];
 
@@ -63,7 +63,7 @@ impl BitBoard {
         }
     }
 
-    pub fn check_match(&self, piece_type: PieceTypeId, pattern: &Pattern, pos: Pos) -> Option<Pattern> {
+    pub fn check_match(&self, piece_type: PieceTypeId, pattern: &PosSet, pos: Pos) -> Option<PosSet> {
         let grid = self.pieces.get(piece_type).expect("Unknown piece type");
         BitBoard::check_pattern(grid, pattern, pos)
     }
@@ -114,11 +114,11 @@ impl BitBoard {
         BitBoard { pieces, empty_pieces, movable_directions }
     }
 
-    fn check_pattern(grid: &Grid, pattern: &Pattern, pos: Pos) -> Option<Pattern> {
+    fn check_pattern(grid: &Grid, pattern: &PosSet, pos: Pos) -> Option<PosSet> {
         pattern.iter().find_map(|&original| BitBoard::check_variant(grid, pattern, pos - original))
     }
 
-    fn check_variant(grid: &Grid, pattern: &Pattern, new_origin: Pos) -> Option<Pattern> {
+    fn check_variant(grid: &Grid, pattern: &PosSet, new_origin: Pos) -> Option<PosSet> {
         let grid_pos = BitBoard::change_origin(pattern, new_origin);
         match grid_pos.iter().all(|&pos| is_set_in_grid(grid, pos)) {
             true => Some(grid_pos),
@@ -126,7 +126,7 @@ impl BitBoard {
         }
     }
 
-    fn change_origin(pattern: &Pattern, origin: Pos) -> Pattern {
+    fn change_origin(pattern: &PosSet, origin: Pos) -> PosSet {
         pattern.iter().map(|&original| original + origin).collect()
     }
 }

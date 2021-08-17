@@ -1,12 +1,12 @@
 use crate::position::Pos;
-use crate::bitboard::Pattern;
+use crate::bitboard::PosSet;
 use crate::piece::PieceType;
 
 /// A pattern of piece positions that represents a valid match on a board.
 #[derive(Debug, Eq, PartialEq)]
 pub struct MatchPattern {
     piece_type: PieceType,
-    spaces: Pattern,
+    spaces: PosSet,
     rank: u32
 }
 
@@ -21,7 +21,7 @@ impl MatchPattern {
     ///              relative positions matter.
     /// * `rank`    - the rank of a match. A higher ranked match takes precedence over
     ///               a lower ranked one.
-    pub fn new(piece_type: PieceType, spaces: Pattern, rank: u32) -> MatchPattern {
+    pub fn new(piece_type: PieceType, spaces: PosSet, rank: u32) -> MatchPattern {
         MatchPattern { piece_type, spaces, rank }
     }
 
@@ -30,7 +30,7 @@ impl MatchPattern {
     }
 
     /// Gets the relative position list for this pattern.
-    pub fn spaces(&self) -> &Pattern {
+    pub fn spaces(&self) -> &PosSet {
         &self.spaces
     }
 
@@ -46,7 +46,7 @@ impl MatchPattern {
 pub struct Match<'a> {
     pattern: &'a MatchPattern,
     changed_pos: Pos,
-    board_pos: Pattern
+    board_pos: PosSet
 }
 
 impl Match<'_> {
@@ -58,7 +58,7 @@ impl Match<'_> {
     /// * `pattern` - the pattern of the found match
     /// * `changed_pos` - the position that was changed and triggered the match
     /// * `board_pos` - actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos, board_pos: Pattern) -> Match {
+    pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos, board_pos: PosSet) -> Match {
         Match { pattern, changed_pos, board_pos }
     }
 
@@ -73,7 +73,7 @@ impl Match<'_> {
     }
 
     /// Gets all of the board positions where this pattern is located.
-    pub fn board_pos(&self) -> &Pattern {
+    pub fn board_pos(&self) -> &PosSet {
         &self.board_pos
     }
 

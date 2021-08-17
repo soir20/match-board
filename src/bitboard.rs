@@ -4,9 +4,9 @@ use crate::piece::{Direction, ALL_DIRECTIONS};
 use enumset::EnumSet;
 
 const BOARD_WIDTH: u8 = 32;
-type Pattern = HashSet<Pos>;
+pub type Pattern = HashSet<Pos>;
+pub(crate) type PieceTypeId = usize;
 type Grid = [u32; BOARD_WIDTH as usize];
-type PieceTypeId = usize;
 
 pub(crate) enum BitBoardPiece {
     Regular(PieceTypeId, EnumSet<Direction>),
@@ -63,9 +63,9 @@ impl BitBoard {
         }
     }
 
-    pub fn find_match(&self, piece_type: PieceTypeId, patterns: Vec<Pattern>, pos: Pos) -> Option<Pattern> {
+    pub fn check_match(&self, piece_type: PieceTypeId, pattern: &Pattern, pos: Pos) -> Option<Pattern> {
         let grid = self.pieces.get(piece_type).expect("Unknown piece type");
-        patterns.into_iter().find_map(|pattern| BitBoard::check_pattern(grid, pattern, pos))
+        BitBoard::check_pattern(grid, pattern, pos)
     }
 
     pub fn trickle(&self) -> BitBoard {
@@ -78,12 +78,44 @@ impl BitBoard {
         mutable_board.into()
     }
 
+    pub fn replace_piece(&self, pos: Pos, piece: BitBoardPiece) -> BitBoard {
+        let mut pieces = self.pieces.clone();
+        let mut empty_pieces = self.empty_pieces;
+        let mut movable_directions = self.movable_directions;
+
+        let x_index = pos.x() as usize;
+
+        match piece {
+            BitBoardPiece::Regular(piece_type, directions) => {
+                pieces[piece_type][x_index] = set_in_column(pieces[piece_type][x_index], pos.y());
+                empty_pieces[x_index] = unset_in_column(empty_pieces[x_index], pos.y());
+                set_movable_directions(&mut movable_directions, pos, directions)
+            },
+            BitBoardPiece::Empty => {
+                if let Some(piece_type) = find_piece_type(&pieces, pos) {
+                    pieces[piece_type][x_index] = unset_in_column(pieces[piece_type][x_index], pos.y());
+                }
+                empty_pieces[x_index] = set_in_column(empty_pieces[x_index], pos.y());
+                set_movable_directions(&mut movable_directions, pos, ALL_DIRECTIONS)
+            },
+            BitBoardPiece::Wall => {
+                if let Some(piece_type) = find_piece_type(&pieces, pos) {
+                    pieces[piece_type][x_index] = unset_in_column(pieces[piece_type][x_index], pos.y());
+                }
+                empty_pieces[x_index] = unset_in_column(empty_pieces[x_index], pos.y());
+                set_movable_directions(&mut movable_directions, pos, EnumSet::new())
+            }
+        };
+
+        BitBoard::new(pieces, empty_pieces, movable_directions)
+    }
+
     fn new(pieces: Vec<Grid>, empty_pieces: Grid, movable_directions: [Grid; 4]) -> BitBoard {
         BitBoard { pieces, empty_pieces, movable_directions }
     }
 
-    fn check_pattern(grid: &Grid, pattern: Pattern, pos: Pos) -> Option<Pattern> {
-        pattern.iter().find_map(|&original| BitBoard::check_variant(grid, &pattern, pos - original))
+    fn check_pattern(grid: &Grid, pattern: &Pattern, pos: Pos) -> Option<Pattern> {
+        pattern.iter().find_map(|&original| BitBoard::check_variant(grid, pattern, pos - original))
     }
 
     fn check_variant(grid: &Grid, pattern: &Pattern, new_origin: Pos) -> Option<Pattern> {
@@ -323,4 +355,18 @@ fn swap_across_columns(from_column: u32, to_column: u32, from_y: u8, to_y: u8) -
     let swapped_to_column = from_column ^ (from_bit >> to_y);
 
     (swapped_from_column, swapped_to_column)
+}
+
+fn set_movable_directions(direction_grid: &mut [Grid; 4], pos: Pos, movable_directions: EnumSet<Direction>) {
+    let x_index = pos.x() as usize;
+
+    for direction in ALL_DIRECTIONS {
+        let is_movable = movable_directions.contains(direction);
+        let changed_column = match is_movable {
+            true => set_in_column(direction_grid[direction.value()][x_index], pos.y()),
+            false => unset_in_column(direction_grid[direction.value()][x_index], pos.y())
+        };
+
+        direction_grid[direction.value()][x_index] = changed_column;
+    }
 }

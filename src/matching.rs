@@ -1,10 +1,12 @@
-use std::collections::{HashSet};
 use crate::position::Pos;
+use crate::bitboard::Pattern;
+use crate::piece::PieceType;
 
 /// A pattern of piece positions that represents a valid match on a board.
 #[derive(Debug, Eq, PartialEq)]
 pub struct MatchPattern {
-    spaces: HashSet<Pos>,
+    piece_type: PieceType,
+    spaces: Pattern,
     rank: u32
 }
 
@@ -19,12 +21,16 @@ impl MatchPattern {
     ///              relative positions matter.
     /// * `rank`    - the rank of a match. A higher ranked match takes precedence over
     ///               a lower ranked one.
-    pub fn new(spaces: HashSet<Pos>, rank: u32) -> MatchPattern {
-        MatchPattern { spaces, rank }
+    pub fn new(piece_type: PieceType, spaces: Pattern, rank: u32) -> MatchPattern {
+        MatchPattern { piece_type, spaces, rank }
+    }
+
+    pub fn piece_type(&self) -> PieceType {
+        self.piece_type
     }
 
     /// Gets the relative position list for this pattern.
-    pub fn spaces(&self) -> &HashSet<Pos> {
+    pub fn spaces(&self) -> &Pattern {
         &self.spaces
     }
 
@@ -40,7 +46,7 @@ impl MatchPattern {
 pub struct Match<'a> {
     pattern: &'a MatchPattern,
     changed_pos: Pos,
-    board_pos: HashSet<Pos>
+    board_pos: Pattern
 }
 
 impl Match<'_> {
@@ -52,7 +58,7 @@ impl Match<'_> {
     /// * `pattern` - the pattern of the found match
     /// * `changed_pos` - the position that was changed and triggered the match
     /// * `board_pos` - actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos, board_pos: HashSet<Pos>) -> Match {
+    pub(crate) fn new(pattern: &MatchPattern, changed_pos: Pos, board_pos: Pattern) -> Match {
         Match { pattern, changed_pos, board_pos }
     }
 
@@ -67,7 +73,7 @@ impl Match<'_> {
     }
 
     /// Gets all of the board positions where this pattern is located.
-    pub fn board_pos(&self) -> &HashSet<Pos> {
+    pub fn board_pos(&self) -> &Pattern {
         &self.board_pos
     }
 
@@ -78,11 +84,12 @@ mod tests {
     use crate::matching::{MatchPattern, Match};
     use std::collections::{HashSet};
     use crate::position::Pos;
+    use crate::piece::PieceType;
 
     #[test]
     fn new_pattern_empty_set_works() {
         let spaces = HashSet::new();
-        let pattern = MatchPattern::new(spaces, 10);
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
         assert!(pattern.spaces().is_empty());
     }
 
@@ -93,7 +100,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces, 10);
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
 
         let mut expected_spaces = HashSet::new();
         expected_spaces.insert(Pos::new(0, 1));
@@ -110,7 +117,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces, 10);
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
         assert_eq!(10, pattern.rank());
     }
 
@@ -121,7 +128,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces, 10);
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
 
         let mut board_pos = HashSet::new();
         board_pos.insert(Pos::new(5, 1));
@@ -139,7 +146,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces, 10);
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
 
         let mut board_pos = HashSet::new();
         board_pos.insert(Pos::new(5, 1));
@@ -157,7 +164,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(spaces, 10);
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
 
         let mut board_pos = HashSet::new();
         board_pos.insert(Pos::new(5, 1));

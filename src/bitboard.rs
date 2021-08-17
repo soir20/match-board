@@ -85,6 +85,10 @@ impl BitBoard {
 
         let x_index = usize::from(pos.x());
 
+        if let Some(old_type) = find_piece_type(&pieces, pos) {
+            pieces[old_type][x_index] = unset_in_column(pieces[old_type][x_index], pos.y());
+        }
+
         match piece {
             BitBoardPiece::Regular(piece_type, directions) => {
                 pieces[piece_type][x_index] = set_in_column(pieces[piece_type][x_index], pos.y());
@@ -92,16 +96,10 @@ impl BitBoard {
                 set_movable_directions(&mut movable_directions, pos, directions)
             },
             BitBoardPiece::Empty => {
-                if let Some(piece_type) = find_piece_type(&pieces, pos) {
-                    pieces[piece_type][x_index] = unset_in_column(pieces[piece_type][x_index], pos.y());
-                }
                 empty_pieces[x_index] = set_in_column(empty_pieces[x_index], pos.y());
                 set_movable_directions(&mut movable_directions, pos, ALL_DIRECTIONS)
             },
             BitBoardPiece::Wall => {
-                if let Some(piece_type) = find_piece_type(&pieces, pos) {
-                    pieces[piece_type][x_index] = unset_in_column(pieces[piece_type][x_index], pos.y());
-                }
                 empty_pieces[x_index] = unset_in_column(empty_pieces[x_index], pos.y());
                 set_movable_directions(&mut movable_directions, pos, EnumSet::new())
             }

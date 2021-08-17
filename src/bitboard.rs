@@ -37,10 +37,6 @@ impl BitBoard {
         }
     }
 
-    pub fn new(pieces: Vec<Grid>, empty_pieces: Grid, movable_directions: [Grid; 4]) -> BitBoard {
-        BitBoard { pieces, empty_pieces, movable_directions }
-    }
-
     pub fn piece(&self, pos: Pos) -> BitBoardPiece {
         if !is_within_board(pos) {
             return BitBoardPiece::Wall;
@@ -80,6 +76,10 @@ impl BitBoard {
 
         mutable_board.trickle_diagonally();
         mutable_board.into()
+    }
+
+    fn new(pieces: Vec<Grid>, empty_pieces: Grid, movable_directions: [Grid; 4]) -> BitBoard {
+        BitBoard { pieces, empty_pieces, movable_directions }
     }
 
     fn check_pattern(grid: &Grid, pattern: Pattern, pos: Pos) -> Option<Pattern> {

@@ -64,14 +64,14 @@ impl Board {
 
     /// Attempts to swap two pieces on the board. If any swap rule is broken (i.e. it
     /// results false), then the pieces will not be swapped, and this method will
-    /// return true.
+    /// return false.
     ///
     /// If the swap is successful, both swapped positions will be marked for a match check.
     ///
     /// Swapping a piece in a direction in which it is marked unmovable is automatically
     /// a violation of the swap rules.
     ///
-    /// Swapping with a piece that is not present is considered valid. The existing piece
+    /// Swapping with a piece that is empty is considered valid. The existing piece
     /// moves into the empty space while the other space is cleared. It is also valid to
     /// swap a piece with itself, though this has no effect on the board besides marking
     /// the piece for a match check.
@@ -106,6 +106,10 @@ impl Board {
     ///
     /// * `pos` - the position of the piece to replace
     /// * `piece` - the piece to put at the given position
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type of the piece is not registered with tbe board.
     pub fn set_piece(&mut self, pos: Pos, piece: Piece) -> Piece {
         self.last_changed.push_back(pos);
         let old_piece = self.piece(pos);

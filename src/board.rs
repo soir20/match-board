@@ -5,8 +5,42 @@ use crate::matching::{MatchPattern, Match};
 use crate::bitboard::{BitBoard, BoardSize};
 use enumset::EnumSet;
 
+/// A group of positions on the board.
 pub type PosSet = HashSet<Pos>;
 
+/// Contains zero or many pieces and represents the current state
+/// of the game.
+///
+/// Positions with larger y values are higher on the board. Positions
+/// with larger x values are further right on the board.
+///
+/// There are three types of pieces: regular pieces, empty pieces,
+/// and walls. Regular pieces may be movable in each of the four
+/// cardinal directions: north, south, east, west. Empty pieces
+/// represent a space with no piece, which is always movable. Walls
+/// are always unmovable.
+///
+/// By default, the board is filled with walls. Users are responsible
+/// for filling the board at the start of a game and after each match.
+///
+/// The board detects matches based on user-provided match patterns.
+/// It does not have any match patterns by default. Patterns with
+/// higher rank are preferred over those with lower rank.
+///
+/// The whole board is not scanned to check for matches. When a
+/// piece is changed, either because it is set/overwritten or it
+/// is swapped, it is marked as having changed. Then the changed
+/// pieces are selectively checked for matches. Users should update
+/// the board based on the positions provided in the match.
+///
+/// Swap rules define which pieces can be changed. By default, the
+/// only swap rule in place is that pieces marked unmovable in a
+/// direction cannot be moved any amount in that direction. **This
+/// means that pieces further than one space away can be swapped by
+/// default.**
+///
+/// The board's lack of default restrictions allows games to implement
+/// their own unique or non-standard rules.
 pub struct Board {
     size: BoardSize,
     patterns: Vec<MatchPattern>,
@@ -23,6 +57,9 @@ impl Board {
     ///
     /// # Arguments
     ///
+    /// * `size` - the size of the board. By default, all spaces are filled with walls,
+    ///            so you do not need to use the whole board. Use the size closest to
+    ///            the size you want.
     /// * `patterns` - the match patterns the board should use to detect matches. If
     ///                two patterns have the same rank, no order is guaranteed.
     /// * `swap_rules` - the swap rules that define whether two pieces can be swapped.
@@ -79,9 +116,9 @@ impl Board {
     /// Swapping a piece in a direction in which it is marked unmovable is automatically
     /// a violation of the swap rules.
     ///
-    /// Swapping with a piece that is empty is considered valid. The existing piece
-    /// moves into the empty space while the other space is cleared. It is also valid to
-    /// swap a piece with itself, though this has no effect on the board besides marking
+    /// Swapping with a piece that is empty is considered valid by default. The existing
+    /// piece moves into the empty space while the other space is cleared. It is also valid
+    /// to swap a piece with itself, though this has no effect on the board besides marking
     /// the piece for a match check.
     ///
     /// The order of two positions provided does not matter.
@@ -110,6 +147,7 @@ impl Board {
         let possible_first_type = self.piece_type(first);
         let possible_second_type = self.piece_type(second);
 
+        // We don't want to undo the swap if both pieces are of the same type
         if possible_first_type != possible_second_type {
             if let Some(first_type) = possible_first_type {
                 self.pieces.entry(first_type).and_modify(
@@ -198,6 +236,12 @@ impl Board {
         next_match
     }
 
+    /// Gets the type of a piece at a certain position. If there is no regular piece
+    /// at that position (i.e. it is empty or a wall), Option::None is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position of the piece whose type to find
     fn piece_type(&self, pos: Pos) -> Option<PieceType> {
         self.pieces.iter().find_map(|(&piece_type, board)|
             match board.is_set(pos) {
@@ -207,6 +251,13 @@ impl Board {
         )
     }
 
+    /// Gets all of the movable directions for a piece at a given position.
+    /// Empty pieces are always movable in all directions, while walls are
+    /// movable in no directions.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position of the piece whose movable directions to find
     fn movable_directions(&self, pos: Pos) -> EnumSet<Direction> {
         let mut directions = EnumSet::new();
 
@@ -219,6 +270,12 @@ impl Board {
         directions
     }
 
+    /// Sets the movable directions for a piece at a given position.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position of the piece whose movable directions to set
+    /// * `directions` the new movable directions of the piece
     fn set_movable_directions(&mut self, pos: Pos, directions: EnumSet<Direction>) {
         for direction in ALL_DIRECTIONS {
             if directions.contains(direction) {
@@ -290,10 +347,29 @@ impl Board {
         true
     }
 
+    /// Checks for a pattern that includes a specific position on the board. Looks
+    /// for all variants of a pattern (all possible patterns that include the required
+    /// position). Returns the positions on the board that correspond to that pattern
+    /// if there is a match.
+    ///
+    /// # Arguments
+    ///
+    /// * `board` - the board to check for a pattern
+    /// * `pattern` - the set of relative positions that represent a pattern
+    /// * `pos` - the position that must be included in a match
     fn check_pattern(board: &BitBoard, pattern: &PosSet, pos: Pos) -> Option<PosSet> {
         pattern.iter().find_map(|&original| Board::check_variant(board, pattern, pos - original))
     }
 
+    /// Checks for a single variant of a pattern and returns the corresponding positions
+    /// on the board if found.
+    ///
+    /// # Arguments
+    ///
+    /// * `board` - the board to check for a variant
+    /// * `pattern` - the set of relative positions that represent a variant
+    /// * `new_origin` - the origin to use for the pattern positions so that they
+    ///                  correspond to actual positions on the board
     fn check_variant(board: &BitBoard, pattern: &PosSet, new_origin: Pos) -> Option<PosSet> {
         let grid_pos = Board::change_origin(pattern, new_origin);
         match grid_pos.iter().all(|&pos| board.is_set(pos)) {
@@ -302,11 +378,22 @@ impl Board {
         }
     }
 
-    fn change_origin(pattern: &PosSet, origin: Pos) -> PosSet {
-        pattern.iter().map(|&original| original + origin).collect()
+    /// Changes the origin of a set of points.
+    ///
+    /// # Arguments
+    ///
+    /// * `positions` - the positions to change the origin of
+    /// * `origin` - the new origin to use for the positions
+    fn change_origin(positions: &PosSet, origin: Pos) -> PosSet {
+        positions.iter().map(|&original| original + origin).collect()
     }
 
-    pub fn trickle_column(&mut self, x: u8) {
+    /// Moves all the pieces in a column down to fill empty spaces directly beneath them.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - the x coordinate of the column to trickle
+    fn trickle_column(&mut self, x: u8) {
         let movable_south = self.movable_directions[Direction::South.value()];
         let mut empty_spaces = VecDeque::new();
 
@@ -323,7 +410,9 @@ impl Board {
         }
     }
 
-    pub fn trickle_diagonally(&mut self) {
+    /// Moves all pieces in the board diagonally and down until they can no longer be moved.
+    /// Should be called after [trickle_column()](Board::trickle_column) is run on all columns.
+    fn trickle_diagonally(&mut self) {
         for x in 0..self.size.width() {
             for y in 0..self.size.height() {
                 let piece_pos = Pos::new(x, y);
@@ -342,6 +431,12 @@ impl Board {
         }
     }
 
+    /// Moves a piece diagonally, if possible, and then moves it down as far as possible.
+    /// Returns the new position of the piece.
+    ///
+    /// # Arguments
+    ///
+    /// * `piece_pos` - the current position of the piece
     fn trickle_piece(&mut self, piece_pos: Pos) -> Pos {
         let mut diagonally_trickled_pos = self.trickle_piece_diagonally(piece_pos, true);
         if diagonally_trickled_pos == piece_pos {
@@ -351,29 +446,39 @@ impl Board {
         self.trickle_piece_down(diagonally_trickled_pos)
     }
 
+    /// Moves a piece one space down and one space horizontally if there is an
+    /// empty space there. Returns the new position of the piece.
+    ///
+    /// # Arguments
+    ///
+    /// * `current_pos` - the current position of the piece to move
+    /// * `to_west` - whether to move the piece west (or east if false)
     fn trickle_piece_diagonally(&mut self, current_pos: Pos, to_west: bool) -> Pos {
-        let mut piece_pos = current_pos;
-        let mut empty_pos = Board::move_pos_down_diagonally(piece_pos, to_west);
+        let empty_pos = Board::move_pos_down_diagonally(current_pos, to_west);
+        let is_empty_pos = self.is_within_board(empty_pos) && self.empties.is_set(empty_pos);
 
         let horizontal_dir_board = match to_west {
             true => self.movable_directions[Direction::West.value()],
             false => self.movable_directions[Direction::East.value()]
         };
         let vertical_dir_board = self.movable_directions[Direction::South.value()];
+        let movable_board = horizontal_dir_board & vertical_dir_board;
 
-        if !(horizontal_dir_board & vertical_dir_board).is_set(current_pos) {
+        if !is_empty_pos || !(movable_board).is_set(current_pos) {
             return piece_pos;
         }
 
-        while self.is_within_board(empty_pos) && self.empties.is_set(empty_pos) {
-            self.swap_pieces(piece_pos, empty_pos);
-            piece_pos = empty_pos;
-            empty_pos = Board::move_pos_down_diagonally(piece_pos, to_west);
-        }
+        self.swap_pieces(piece_pos, empty_pos);
 
-        piece_pos
+        empty_pos
     }
 
+    /// Moves a piece down until it is moved into the lowest empty space directly
+    /// below it. Returns the new position of the piece
+    ///
+    /// # Arguments
+    ///
+    /// * `piece_pos` - the current position of the piece to move
     fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
         let vertical_dir_board = self.movable_directions[Direction::South.value()];
         if !vertical_dir_board.is_set(piece_pos){
@@ -389,6 +494,12 @@ impl Board {
         Pos::new(piece_pos.x(), next_y)
     }
 
+    /// Moves a position one space down and one space horizontally.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position to move
+    /// * `to_west` - whether to move the position west (or east if false)
     fn move_pos_down_diagonally(pos: Pos, to_west: bool) -> Pos {
         match to_west {
             true => Pos::new(pos.x() - 1, pos.y() - 1),
@@ -396,9 +507,13 @@ impl Board {
         }
     }
 
+    /// Checks if a given position is inside the board.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position to check
     fn is_within_board(&self, pos: Pos) -> bool {
         pos.x() < self.size.width() && pos.y() < self.size.height()
     }
 
 }
-

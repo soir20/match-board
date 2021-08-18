@@ -1,5 +1,5 @@
 use crate::position::Pos;
-use crate::bitboard::PosSet;
+use crate::board::PosSet;
 use crate::piece::PieceType;
 
 /// A pattern of piece positions that represents a valid match on a board.

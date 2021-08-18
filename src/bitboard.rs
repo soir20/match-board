@@ -1,42 +1,43 @@
 use crate::position::Pos;
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
+/// The size of a board as
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum BoardSize {
-    ElevenByEleven,
-    TwelveByTen,
-    FourteenByNine,
-    SixteenByEight,
-    EighteenBySeven,
-    TwentyOneBySix,
-    TwentyFiveByFive,
-    ThirtyTwoByFour
+    FourByThirtyTwo,
+    FiveByTwentyFive,
+    SixByTwentyOne,
+    SevenByEighteen,
+    EightBySixteen,
+    NineByFourteen,
+    TenByTwelve,
+    ElevenByEleven
 }
 
 impl BoardSize {
     pub fn width(&self) -> u8 {
         match *self {
-            BoardSize::ElevenByEleven => 11,
-            BoardSize::TwelveByTen => 12,
-            BoardSize::FourteenByNine => 14,
-            BoardSize::SixteenByEight => 16,
-            BoardSize::EighteenBySeven => 18,
-            BoardSize::TwentyOneBySix => 21,
-            BoardSize::TwentyFiveByFive => 25,
-            BoardSize::ThirtyTwoByFour => 32
+            BoardSize::FourByThirtyTwo => 4,
+            BoardSize::FiveByTwentyFive => 5,
+            BoardSize::SixByTwentyOne => 6,
+            BoardSize::SevenByEighteen => 7,
+            BoardSize::EightBySixteen => 8,
+            BoardSize::NineByFourteen => 9,
+            BoardSize::TenByTwelve => 10,
+            BoardSize::ElevenByEleven => 11
         }
     }
 
     pub fn height(&self) -> u8 {
         match *self {
-            BoardSize::ElevenByEleven => 11,
-            BoardSize::TwelveByTen => 10,
-            BoardSize::FourteenByNine => 9,
-            BoardSize::SixteenByEight => 8,
-            BoardSize::EighteenBySeven => 7,
-            BoardSize::TwentyOneBySix => 6,
-            BoardSize::TwentyFiveByFive => 5,
-            BoardSize::ThirtyTwoByFour => 4
+            BoardSize::FourByThirtyTwo => 32,
+            BoardSize::FiveByTwentyFive => 25,
+            BoardSize::SixByTwentyOne => 21,
+            BoardSize::SevenByEighteen => 18,
+            BoardSize::EightBySixteen => 16,
+            BoardSize::NineByFourteen => 14,
+            BoardSize::TenByTwelve => 12,
+            BoardSize::ElevenByEleven => 11
         }
     }
 }

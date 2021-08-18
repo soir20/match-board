@@ -48,6 +48,8 @@ pub const ALL_DIRECTIONS: EnumSet<Direction> = enum_set!(
 );
 
 /// An individual, possibly-movable piece on a board that belongs to a category.
+///
+/// Empty pieces are always movable, while walls are never movable.
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 pub enum Piece {
     Regular(PieceType, EnumSet<Direction>),

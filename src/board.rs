@@ -465,10 +465,10 @@ impl Board {
         let movable_board = horizontal_dir_board & vertical_dir_board;
 
         if !is_empty_pos || !(movable_board).is_set(current_pos) {
-            return piece_pos;
+            return current_pos;
         }
 
-        self.swap_pieces(piece_pos, empty_pos);
+        self.swap_pieces(current_pos, empty_pos);
 
         empty_pos
     }

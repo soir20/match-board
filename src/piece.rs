@@ -113,7 +113,7 @@ impl Display for Piece {
 /// # Arguments
 ///
 /// * `str` - the string to get the first character of. May be empty
-fn first_char(str: &str) -> char {
+pub(crate) fn first_char(str: &str) -> char {
     str.chars().next().unwrap_or('?')
 }
 

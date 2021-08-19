@@ -1,9 +1,10 @@
 use crate::position::Pos;
 use crate::board::PosSet;
-use crate::piece::PieceType;
+use crate::piece::{PieceType, first_char};
+use std::fmt::{Display, Formatter};
 
 /// A pattern of piece positions that represents a valid match on a board.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct MatchPattern {
     piece_type: PieceType,
     spaces: PosSet,
@@ -41,8 +42,35 @@ impl MatchPattern {
 
 }
 
+impl Display for MatchPattern {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut str = String::new();
+
+        let type_abbreviation = first_char(self.piece_type.name());
+
+        let max_x = self.spaces.iter().map(|pos| pos.x()).max().unwrap_or(0);
+        let max_y = self.spaces.iter().map(|pos| pos.y()).max().unwrap_or(0);
+
+        for x in 0..max_x {
+            for y in 0..max_y {
+                match self.spaces.contains(&Pos::new(x, y)) {
+                    true => str.push(type_abbreviation),
+                    false => str.push(' ')
+                };
+            }
+
+            str.push('\n');
+        }
+
+        str.push_str("\nr = ");
+        str.push_str(&self.rank().to_string());
+
+        write!(f, "{}", str)
+    }
+}
+
 // A match found in a board.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Match<'a> {
     pattern: &'a MatchPattern,
     changed_pos: Pos,
@@ -77,6 +105,38 @@ impl Match<'_> {
         &self.board_pos
     }
 
+}
+
+impl Display for Match<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut str = String::new();
+
+        let type_abbreviation = first_char(self.pattern().piece_type().name());
+
+        let max_x = self.pattern().spaces().iter().map(|pos| pos.x()).max().unwrap_or(0);
+        let max_y = self.pattern().spaces().iter().map(|pos| pos.y()).max().unwrap_or(0);
+
+        for x in 0..max_x {
+            for y in 0..max_y {
+                let pos = Pos::new(x, y);
+
+                str.push(if pos == self.changed_pos() {
+                    'X'
+                } else if self.pattern().spaces().contains(&pos) {
+                    type_abbreviation
+                } else {
+                    ' '
+                });
+            }
+
+            str.push('\n');
+        }
+
+        str.push_str("\nr = ");
+        str.push_str(&self.pattern().rank().to_string());
+
+        write!(f, "{}", str)
+    }
 }
 
 #[cfg(test)]

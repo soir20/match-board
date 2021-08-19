@@ -318,10 +318,9 @@ impl Board {
     /// * `from` - the current position of the piece
     /// * `to` - the position where the piece will be moved
     fn is_vertically_movable(&self, from: Pos, to: Pos) -> bool {
-        let vertical_change = to.y() - from.y();
-        if vertical_change > 0 {
+        if to.y() > from.y() {
             return self.movable_directions[Direction::North.value()].is_set(from);
-        } else if vertical_change < 0 {
+        } else if to.y() < from.y() {
             return self.movable_directions[Direction::South.value()].is_set(from);
         }
 
@@ -337,10 +336,9 @@ impl Board {
     /// * `from` - the current position of the piece
     /// * `to` - the position where the piece will be moved
     fn is_horizontally_movable(&self, from: Pos, to: Pos) -> bool {
-        let horizontal_change = to.x() - from.x();
-        if horizontal_change > 0 {
+        if to.x() > from.x() {
             return self.movable_directions[Direction::East.value()].is_set(from);
-        } else if horizontal_change < 0 {
+        } else if to.x() < from.x() {
             return self.movable_directions[Direction::West.value()].is_set(from);
         }
 

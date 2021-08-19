@@ -79,7 +79,7 @@ impl BitBoard {
         }
     }
 
-    /// Checks if a coordinate is set in the bitboard.
+    /// Checks if a coordinate is set in this bitboard.
     ///
     /// # Arguments
     ///
@@ -88,19 +88,29 @@ impl BitBoard {
         self.board.bit(self.bit_pos(pos))
     }
 
-    /// Sets a coordinate in the bitboard.
+    /// Sets a coordinate in this bitboard.
     ///
     /// # Arguments
     ///
-    /// * `pos` - the
+    /// * `pos` - the coordinate to set
     pub fn set(&self, pos: Pos) -> BitBoard {
         self.change_board(self.board | (U256::one() << self.bit_pos(pos)))
     }
 
+    /// Clears a coordinate in this bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the coordinate to unset
     pub fn unset(&self, pos: Pos) -> BitBoard {
         self.change_board(self.board & !(U256::one() << self.bit_pos(pos)))
     }
 
+    /// Swaps two coordinates in this bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the coordinate to set
     pub fn swap(&self, first: Pos, second: Pos) -> BitBoard {
         let bit1: U256 = self.bit(first);
         let bit2: U256 = self.bit(second);
@@ -111,6 +121,11 @@ impl BitBoard {
         self.change_board(self.board ^ xor_in_pos)
     }
 
+    /// Creates a new board with the same width and height.
+    ///
+    /// # Arguments
+    ///
+    /// * `board` - the integer backing the new board to create
     fn change_board(&self, board: U256) -> BitBoard {
         BitBoard {
             board,
@@ -119,10 +134,20 @@ impl BitBoard {
         }
     }
 
+    /// Converts a coordinate into the position of the corresponding bit.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the coordinate to convert
     fn bit_pos(&self, pos: Pos) -> usize {
         usize::from(pos.x() * self.width + pos.y())
     }
 
+    /// Gets the bit at a specific position as a 256-bit integer.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position to convert
     fn bit(&self, pos: Pos) -> U256 {
         match self.is_set(pos) {
             true => U256::one(),

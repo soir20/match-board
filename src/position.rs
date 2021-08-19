@@ -2,7 +2,7 @@ use std::ops::{Add, Sub};
 use std::fmt::{Display, Formatter};
 
 /// A position that represents a location in a two-dimensional plane.
-#[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub struct Pos {
 
     /// The horizontal component of the position

@@ -133,35 +133,7 @@ impl Board {
             return false;
         }
 
-        self.last_changed.push_back(first);
-        self.last_changed.push_back(second);
-
-        self.empties = self.empties.swap(first, second);
-        self.movable_directions = [
-            self.movable_directions[0].swap(first, second),
-            self.movable_directions[1].swap(first, second),
-            self.movable_directions[2].swap(first, second),
-            self.movable_directions[3].swap(first, second)
-        ];
-
-        let possible_first_type = self.piece_type(first);
-        let possible_second_type = self.piece_type(second);
-
-        // We don't want to undo the swap if both pieces are of the same type
-        if possible_first_type != possible_second_type {
-            if let Some(first_type) = possible_first_type {
-                self.pieces.entry(first_type).and_modify(
-                    |board| { *board = board.swap(first, second) }
-                );
-            }
-
-            if let Some(second_type) = possible_second_type {
-                self.pieces.entry(second_type).and_modify(
-                    |board| { *board = board.swap(first, second) }
-                );
-            }
-        }
-
+        self.swap_always(first, second);
         true
     }
 
@@ -400,7 +372,7 @@ impl Board {
                 empty_spaces.push_back(y);
             } else if movable_south.is_set(Pos::new(x, y)) {
                 if let Some(space_to_fill) = empty_spaces.pop_front() {
-                    self.swap_pieces(Pos::new(x, y), Pos::new(x, space_to_fill));
+                    self.swap_always(Pos::new(x, y), Pos::new(x, space_to_fill));
                 }
             } else {
                 empty_spaces.clear();
@@ -466,7 +438,7 @@ impl Board {
             return current_pos;
         }
 
-        self.swap_pieces(current_pos, empty_pos);
+        self.swap_always(current_pos, empty_pos);
 
         empty_pos
     }
@@ -487,9 +459,47 @@ impl Board {
         while next_y > 0 && self.empties.is_set(Pos::new(piece_pos.x(), next_y - 1)) {
             next_y -= 1;
         }
-        self.swap_pieces(piece_pos, Pos::new(piece_pos.x(), next_y));
+        self.swap_always(piece_pos, Pos::new(piece_pos.x(), next_y));
 
         Pos::new(piece_pos.x(), next_y)
+    }
+
+    /// Swaps two pieces regardless of the swap rules. Pieces more than one
+    /// space apart can be swapped. Always successful.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - the position of a piece to swap
+    /// * `second` - the position of another piece to swap
+    fn swap_always(&mut self, first: Pos, second: Pos) {
+        self.last_changed.push_back(first);
+        self.last_changed.push_back(second);
+
+        self.empties = self.empties.swap(first, second);
+        self.movable_directions = [
+            self.movable_directions[0].swap(first, second),
+            self.movable_directions[1].swap(first, second),
+            self.movable_directions[2].swap(first, second),
+            self.movable_directions[3].swap(first, second)
+        ];
+
+        let possible_first_type = self.piece_type(first);
+        let possible_second_type = self.piece_type(second);
+
+        // We don't want to undo the swap if both pieces are of the same type
+        if possible_first_type != possible_second_type {
+            if let Some(first_type) = possible_first_type {
+                self.pieces.entry(first_type).and_modify(
+                    |board| { *board = board.swap(first, second) }
+                );
+            }
+
+            if let Some(second_type) = possible_second_type {
+                self.pieces.entry(second_type).and_modify(
+                    |board| { *board = board.swap(first, second) }
+                );
+            }
+        }
     }
 
     /// Moves a position one space down and one space horizontally.

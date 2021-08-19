@@ -1,79 +1,109 @@
 use crate::position::Pos;
 use std::ops::{BitAnd, BitOr, BitXor, Not};
+use primitive_types::U256;
 
-/// The size of a board as
+/// The size of a board as width by height.
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum BoardSize {
-    FourByThirtyTwo,
-    FiveByTwentyFive,
-    SixByTwentyOne,
-    SevenByEighteen,
-    EightBySixteen,
-    NineByFourteen,
-    TenByTwelve,
-    ElevenByEleven
+
+    /* These are hard-coded so we know they fit in a 256-bit integer.
+       (Width x height <= 256.) Validating provided dimensions may
+       be confusing to users, so this enum makes the sizes explicit.
+       They are as large as possible because extra space can simply be
+       filled by walls. */
+    EightByThirtyTwo,
+    NineByTwentyEight,
+    TenByTwentyFive,
+    ElevenByTwentyThree,
+    TwelveByTwentyOne,
+    ThirteenByNineteen,
+    FourteenByEighteen,
+    FifteenBySeventeen,
+    SixteenBySixteen
+
 }
 
 impl BoardSize {
+
+    /// Gets the width of the board for this size.
     pub fn width(&self) -> u8 {
         match *self {
-            BoardSize::FourByThirtyTwo => 4,
-            BoardSize::FiveByTwentyFive => 5,
-            BoardSize::SixByTwentyOne => 6,
-            BoardSize::SevenByEighteen => 7,
-            BoardSize::EightBySixteen => 8,
-            BoardSize::NineByFourteen => 9,
-            BoardSize::TenByTwelve => 10,
-            BoardSize::ElevenByEleven => 11
+            BoardSize::EightByThirtyTwo => 8,
+            BoardSize::NineByTwentyEight => 9,
+            BoardSize::TenByTwentyFive => 10,
+            BoardSize::ElevenByTwentyThree => 11,
+            BoardSize::TwelveByTwentyOne => 12,
+            BoardSize::ThirteenByNineteen => 13,
+            BoardSize::FourteenByEighteen => 14,
+            BoardSize::FifteenBySeventeen => 15,
+            BoardSize::SixteenBySixteen => 16
         }
     }
 
+    /// Gets the height of the board for this size.
     pub fn height(&self) -> u8 {
         match *self {
-            BoardSize::FourByThirtyTwo => 32,
-            BoardSize::FiveByTwentyFive => 25,
-            BoardSize::SixByTwentyOne => 21,
-            BoardSize::SevenByEighteen => 18,
-            BoardSize::EightBySixteen => 16,
-            BoardSize::NineByFourteen => 14,
-            BoardSize::TenByTwelve => 12,
-            BoardSize::ElevenByEleven => 11
+            BoardSize::EightByThirtyTwo => 32,
+            BoardSize::NineByTwentyEight => 28,
+            BoardSize::TenByTwentyFive => 25,
+            BoardSize::ElevenByTwentyThree => 23,
+            BoardSize::TwelveByTwentyOne => 21,
+            BoardSize::ThirteenByNineteen => 19,
+            BoardSize::FourteenByEighteen => 18,
+            BoardSize::FifteenBySeventeen => 17,
+            BoardSize::SixteenBySixteen => 16
         }
     }
+
 }
 
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub(crate) struct BitBoard {
-    board: u128,
+    board: U256,
     width: u8,
     height: u8
 }
 
 impl BitBoard {
 
+    /// Creates a new bitboard with a given size.
+    ///
+    /// # Arguments
+    ///
+    /// * `size` - the size of the bitboard to create
     pub fn new(size: BoardSize) -> BitBoard {
         BitBoard {
-            board: 0,
+            board: U256::from(0),
             width: size.width(),
             height: size.height()
         }
     }
 
+    /// Checks if a coordinate is set in the bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the coordinate to check
     pub fn is_set(&self, pos: Pos) -> bool {
-        (self.board >> self.bit_pos(pos)) & 1 == 1
+        self.board.bit(self.bit_pos(pos))
     }
 
+    /// Sets a coordinate in the bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the
     pub fn set(&self, pos: Pos) -> BitBoard {
-        self.change_board(self.board | (1 << self.bit_pos(pos)))
+        self.change_board(self.board | (U256::one() << self.bit_pos(pos)))
     }
 
     pub fn unset(&self, pos: Pos) -> BitBoard {
-        self.change_board(self.board & !(1 << self.bit_pos(pos)))
+        self.change_board(self.board & !(U256::one() << self.bit_pos(pos)))
     }
 
     pub fn swap(&self, first: Pos, second: Pos) -> BitBoard {
-        let bit1: u128 = self.is_set(first).into();
-        let bit2: u128 = self.is_set(second).into();
+        let bit1: U256 = self.bit(first);
+        let bit2: U256 = self.bit(second);
 
         let xor_single = bit1 ^ bit2;
         let xor_in_pos = (xor_single << self.bit_pos(first)) | (xor_single << self.bit_pos(second));
@@ -81,7 +111,7 @@ impl BitBoard {
         self.change_board(self.board ^ xor_in_pos)
     }
 
-    fn change_board(&self, board: u128) -> BitBoard {
+    fn change_board(&self, board: U256) -> BitBoard {
         BitBoard {
             board,
             width: self.width,
@@ -89,8 +119,15 @@ impl BitBoard {
         }
     }
 
-    fn bit_pos(&self, pos: Pos) -> u8 {
-        pos.x() * self.width + pos.y()
+    fn bit_pos(&self, pos: Pos) -> usize {
+        usize::from(pos.x() * self.width + pos.y())
+    }
+
+    fn bit(&self, pos: Pos) -> U256 {
+        match self.is_set(pos) {
+            true => U256::one(),
+            false => U256::zero()
+        }
     }
 }
 

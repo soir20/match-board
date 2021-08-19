@@ -1,9 +1,10 @@
 use crate::position::Pos;
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 use primitive_types::U256;
+use std::fmt::{Display, Formatter};
 
 /// The size of a board as width by height.
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum BoardSize {
 
     /* These are hard-coded so we know they fit in a 256-bit integer.
@@ -57,13 +58,21 @@ impl BoardSize {
 
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+impl Display for BoardSize {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}x{}", self.width(), self.height())
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 pub(crate) struct BitBoard {
     board: U256,
     width: u8,
     height: u8
 }
 
+/// A bitboard represents game state in binary. Board operations copy the board
+/// with the new state.
 impl BitBoard {
 
     /// Creates a new bitboard with a given size.
@@ -185,5 +194,23 @@ impl Not for BitBoard {
 
     fn not(self) -> Self::Output {
         self.change_board(!self.board)
+    }
+}
+
+impl Display for BitBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut str = String::new();
+        for x in 0..self.width {
+            for y in 0..self.height {
+                str.push(match self.is_set(Pos::new(x, y)) {
+                    true => '1',
+                    false => '0'
+                })
+            }
+
+            str.push('\n');
+        }
+
+        write!(f, "{}", str)
     }
 }

@@ -178,7 +178,41 @@ mod tests {
     }
 
     #[test]
-    fn new_pattern_not_at_origin_set_moved() {
+    fn new_pattern_not_at_origin_set_moved_horizontally() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(4, 1));
+        spaces.insert(Pos::new(5, 0));
+        spaces.insert(Pos::new(9, 5));
+
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
+
+        assert_eq!(expected_spaces, *pattern.spaces());
+    }
+
+    #[test]
+    fn new_pattern_not_at_origin_set_moved_vertically() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 6));
+        spaces.insert(Pos::new(1, 5));
+        spaces.insert(Pos::new(5, 10));
+
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
+
+        assert_eq!(expected_spaces, *pattern.spaces());
+    }
+
+    #[test]
+    fn new_pattern_not_at_origin_set_moved_horizontally_vertically() {
         let mut spaces = HashSet::new();
         spaces.insert(Pos::new(4, 6));
         spaces.insert(Pos::new(5, 5));
@@ -190,6 +224,23 @@ mod tests {
         expected_spaces.insert(Pos::new(0, 1));
         expected_spaces.insert(Pos::new(1, 0));
         expected_spaces.insert(Pos::new(5, 5));
+
+        assert_eq!(expected_spaces, *pattern.spaces());
+    }
+
+    #[test]
+    fn new_pattern_at_max_set_moved_horizontally_vertically() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(u8::MAX, u8::MAX));
+        spaces.insert(Pos::new(u8::MAX, u8::MAX - 1));
+        spaces.insert(Pos::new(u8::MAX - 1, u8::MAX));
+
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(1, 1));
 
         assert_eq!(expected_spaces, *pattern.spaces());
     }

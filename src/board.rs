@@ -765,14 +765,14 @@ mod tests {
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
-        board.set_piece(Pos::new(1, 5), piece2);
+        board.set_piece(Pos::new(1, 0), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(1, 5)));
         match board.piece(Pos::new(1, 2)) {
             Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
             _ => panic!("Wrong piece")
         };
-        match board.piece(Pos::new(1, 5)) {
+        match board.piece(Pos::new(1, 0)) {
             Piece::Regular(piece_type, _) => assert_eq!(type2, piece_type),
             _ => panic!("Wrong piece")
         };
@@ -821,7 +821,7 @@ mod tests {
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
-        board.set_piece(Pos::new(4, 3), piece2);
+        board.set_piece(Pos::new(0, 2), piece2);
 
         assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(4, 3)));
 
@@ -829,7 +829,7 @@ mod tests {
             Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
             _ => panic!("Wrong piece")
         };
-        match board.piece(Pos::new(4, 3)) {
+        match board.piece(Pos::new(0, 2)) {
             Piece::Regular(piece_type, _) => assert_eq!(type2, piece_type),
             _ => panic!("Wrong piece")
         };

@@ -193,18 +193,21 @@ impl Board {
         while next_match.is_none() {
             next_pos = self.last_changed.pop_front()?;
 
-            if let Some(piece_type) = self.piece_type(next_pos) {
-                let board =  self.pieces.entry(piece_type).or_insert(BitBoard::new(self.size));
+            let boards = &self.pieces;
 
-                next_match = self.patterns.iter().find_map(|pattern| {
+            next_match = self.patterns.iter().find_map(|pattern| {
+                if let Some(board) = boards.get(&pattern.piece_type()) {
                     let positions = Board::check_pattern(
                         board,
                         pattern.spaces(),
                         next_pos
                     )?;
-                    Some(Match::new(pattern, next_pos, positions))
-                });
-            }
+
+                    return Some(Match::new(pattern, next_pos, positions));
+                }
+
+                None
+            });
         }
 
         next_match
@@ -330,7 +333,15 @@ impl Board {
     /// * `pattern` - the set of relative positions that represent a pattern
     /// * `pos` - the position that must be included in a match
     fn check_pattern(board: &BitBoard, pattern: &PosSet, pos: Pos) -> Option<PosSet> {
-        pattern.iter().find_map(|&original| Board::check_variant(board, pattern, pos - original))
+        pattern.iter().find_map(|&original| {
+
+            // Don't check variants outside the board
+            if original.x() > pos.x() || original.y() > pos.y() {
+                return None;
+            }
+
+            Board::check_variant(board, pattern, pos - original)
+        })
     }
 
     /// Checks for a single variant of a pattern and returns the corresponding positions
@@ -677,7 +688,7 @@ mod tests {
         ]);
         let type1 = PieceType::new("first");
         let type2 = PieceType::new("second");
-        let mut piece1 = Piece::Regular(type1, enum_set!(Direction::West | Direction::East));
+        let piece1 = Piece::Regular(type1, enum_set!(Direction::West | Direction::East));
 
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -703,7 +714,7 @@ mod tests {
         ]);
         let type1 = PieceType::new("first");
         let type2 = PieceType::new("second");
-        let mut piece1 = Piece::Regular(type1, enum_set!(Direction::North | Direction::South));
+        let piece1 = Piece::Regular(type1, enum_set!(Direction::North | Direction::South));
 
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -729,7 +740,7 @@ mod tests {
         ]);
         let type1 = PieceType::new("first");
         let type2 = PieceType::new("second");
-        let mut piece1 = Piece::Regular(type1, enum_set!(
+        let piece1 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
         ));
 
@@ -758,7 +769,7 @@ mod tests {
         ]);
         let type1 = PieceType::new("first");
         let type2 = PieceType::new("second");
-        let mut piece1 = Piece::Regular(type1, enum_set!(
+        let piece1 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
         ));
 
@@ -786,7 +797,7 @@ mod tests {
         ]);
         let type1 = PieceType::new("first");
         let type2 = PieceType::new("second");
-        let mut piece1 = Piece::Regular(type1, enum_set!(
+        let piece1 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::South | Direction::West
         ));
 
@@ -814,7 +825,7 @@ mod tests {
         ]);
         let type1 = PieceType::new("first");
         let type2 = PieceType::new("second");
-        let mut piece1 = Piece::Regular(type1, enum_set!(
+        let piece1 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::South | Direction::East
         ));
 
@@ -935,6 +946,8 @@ mod tests {
         board.set_piece(Pos::new(0, 1), piece1);
         board.set_piece(Pos::new(1, 1), piece2);
         board.set_piece(Pos::new(8, 8), piece3);
+        board.set_piece(Pos::new(6, 6), Piece::Empty);
+        board.next_match();
         board.next_match();
         board.next_match();
         board.next_match();
@@ -979,15 +992,15 @@ mod tests {
 
         let next_match2 = board.next_match().unwrap();
         assert_eq!(Pos::new(1, 1), next_match2.changed_pos());
+        assert!(next_match2.board_pos().contains(&Pos::new(0, 0)));
+        assert!(next_match2.board_pos().contains(&Pos::new(1, 1)));
         assert!(next_match2.board_pos().contains(&Pos::new(2, 2)));
-        assert!(next_match2.board_pos().contains(&Pos::new(3, 3)));
-        assert!(next_match2.board_pos().contains(&Pos::new(4, 4)));
 
         let next_match3 = board.next_match().unwrap();
         assert_eq!(Pos::new(2, 2), next_match3.changed_pos());
+        assert!(next_match3.board_pos().contains(&Pos::new(0, 0)));
+        assert!(next_match3.board_pos().contains(&Pos::new(1, 1)));
         assert!(next_match3.board_pos().contains(&Pos::new(2, 2)));
-        assert!(next_match3.board_pos().contains(&Pos::new(3, 3)));
-        assert!(next_match3.board_pos().contains(&Pos::new(4, 4)));
     }
 
     #[test]
@@ -1102,7 +1115,9 @@ mod tests {
 
         board.set_piece(Pos::new(0, 0), piece1);
         board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(2, 3), Piece::Empty);
 
+        board.next_match();
         board.next_match();
         board.next_match();
 

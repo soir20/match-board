@@ -23,7 +23,14 @@ impl MatchPattern {
     /// * `rank`    - the rank of a match. A higher ranked match takes precedence over
     ///               a lower ranked one.
     pub fn new(piece_type: PieceType, spaces: PosSet, rank: u32) -> MatchPattern {
-        MatchPattern { piece_type, spaces, rank }
+        let min_x = spaces.iter().map(|space | space.x()).min().unwrap_or(0);
+        let min_y = spaces.iter().map(|space | space.y()).min().unwrap_or(0);
+
+        let spaces_around_origin = spaces.iter().map(
+            |space| Pos::new(space.x() - min_x, space.y() - min_y)
+        ).collect();
+
+        MatchPattern { piece_type, spaces: spaces_around_origin, rank }
     }
 
     pub fn piece_type(&self) -> PieceType {
@@ -159,6 +166,23 @@ mod tests {
         spaces.insert(Pos::new(0, 1));
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
+
+        assert_eq!(expected_spaces, *pattern.spaces());
+    }
+
+    #[test]
+    fn new_pattern_not_at_origin_set_moved() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(4, 6));
+        spaces.insert(Pos::new(5, 5));
+        spaces.insert(Pos::new(9, 10));
 
         let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
 

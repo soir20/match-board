@@ -150,16 +150,18 @@ impl Board {
         let old_piece = self.piece(pos);
 
         if let Some(piece_type) = self.piece_type(pos) {
+            let size = self.size;
             self.pieces.entry(piece_type).and_modify(
                 |board| { *board = board.unset(pos) }
-            );
+            ).or_insert_with(|| BitBoard::new(size).unset(pos));
         }
 
         match piece {
             Piece::Regular(piece_type, directions) => {
+                let size = self.size;
                 self.pieces.entry(piece_type).and_modify(
                     |board| { *board = board.set(pos) }
-                );
+                ).or_insert_with(|| BitBoard::new(size).set(pos));
                 self.empties = self.empties.unset(pos);
                 self.set_movable_directions(pos, directions);
             },
@@ -488,16 +490,17 @@ impl Board {
 
         // We don't want to undo the swap if both pieces are of the same type
         if possible_first_type != possible_second_type {
+            let size = self.size;
             if let Some(first_type) = possible_first_type {
                 self.pieces.entry(first_type).and_modify(
                     |board| { *board = board.swap(first, second) }
-                );
+                ).or_insert_with(|| BitBoard::new(size).swap(first, second));
             }
 
             if let Some(second_type) = possible_second_type {
                 self.pieces.entry(second_type).and_modify(
                     |board| { *board = board.swap(first, second) }
-                );
+                ).or_insert_with(|| BitBoard::new(size).swap(first, second));
             }
         }
     }
@@ -863,10 +866,6 @@ mod tests {
         board.set_piece(Pos::new(1, 2), piece1);
         match board.set_piece(Pos::new(1, 2), piece2) {
             Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
-            _ => panic!("Wrong piece")
-        };
-        match board.piece(Pos::new(1, 3)) {
-            Piece::Regular(piece_type, _) => assert_eq!(type2, piece_type),
             _ => panic!("Wrong piece")
         };
     }

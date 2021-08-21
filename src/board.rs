@@ -35,9 +35,9 @@ pub type PosSet = HashSet<Pos>;
 ///
 /// Swap rules define which pieces can be changed. By default, the
 /// only swap rules in place is that pieces marked unmovable in a
-/// direction cannot be moved any amount in that direction, and pieces
-/// cannot be swapped outside the board. **This means that pieces further
-/// than one space away can be swapped by default.**
+/// direction cannot be moved any amount in that direction. **This
+/// means that pieces further than one space away can be swapped
+/// by default.**
 ///
 /// The board's lack of default restrictions allows games to implement
 /// their own unique or non-standard rules.
@@ -71,9 +71,6 @@ impl Board {
                mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
         patterns.sort_by(|a, b| b.rank().cmp(&a.rank()));
         swap_rules.insert(0, Box::from(Board::are_pieces_movable));
-        swap_rules.insert(0, Box::from(
-            |board: &Board, pos1, pos2| board.is_within_board(pos1) && board.is_within_board(pos2)
-        ));
 
         Board {
             size,
@@ -91,14 +88,21 @@ impl Board {
         }
     }
 
-    /// Gets a piece at the given position on the board. If the position is
-    /// outside the board, a wall is returned. By default, all pieces on the
-    /// board are walls.
+    /// Gets a piece at the given position on the board. By default,
+    /// all pieces on the board are walls.
     ///
     /// # Arguments
     ///
     /// * `pos` - position of the piece to get
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided position is outside the board.
     pub fn piece(&self, pos: Pos) -> Piece {
+        if !self.is_within_board(pos) {
+            panic!("Tried to get piece outside board: {}", pos);
+        }
+
         if self.empties.is_set(pos) {
             return Piece::Empty;
         }
@@ -117,8 +121,7 @@ impl Board {
     /// If the swap is successful, both swapped positions will be marked for a match check.
     ///
     /// Swapping a piece in a direction in which it is marked unmovable is automatically
-    /// a violation of the swap rules. Swapping a piece outside the board is also an
-    /// automatic violation.
+    /// a violation of the swap rules.
     ///
     /// Swapping with a piece that is empty is considered valid by default. The existing
     /// piece moves into the empty space while the other space is cleared. It is also valid
@@ -131,8 +134,16 @@ impl Board {
     ///
     /// * `first` - the first position of a piece to swap
     /// * `second` - the second position of a piece to swap
+    ///
+    /// # Panics
+    ///
+    /// Panics if either position is outside the board.
     #[must_use]
     pub fn swap_pieces(&mut self, first: Pos, second: Pos) -> bool {
+        if !self.is_within_board(first) || !self.is_within_board(second) {
+            panic!("Tried to swap piece outside board: {} with {}", first, second);
+        }
+
         if !self.swap_rules.iter().all(|rule| rule(self, first, second)) {
             return false;
         }
@@ -149,7 +160,15 @@ impl Board {
     ///
     /// * `pos` - the position of the piece to replace
     /// * `piece` - the piece to put at the given position
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided position is outside the board.
     pub fn set_piece(&mut self, pos: Pos, piece: Piece) -> Piece {
+        if !self.is_within_board(pos) {
+            panic!("Tried to set piece out of bounds: {}", pos);
+        }
+
         self.last_changed.push_back(pos);
         let old_piece = self.piece(pos);
 
@@ -551,6 +570,17 @@ mod tests {
     use crate::matching::MatchPattern;
     use crate::bitboard::BoardSize;
     use enumset::enum_set;
+    use std::panic;
+
+    #[test]
+    #[should_panic]
+    fn get_piece_out_of_bounds_panics() {
+        let board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        board.piece(Pos::new(16, 16));
+    }
 
     #[test]
     fn swap_adjacent_all_rules_passed_swapped() {
@@ -684,7 +714,9 @@ mod tests {
     }
 
     #[test]
-    fn swap_first_pos_outside_board_not_swapped() {
+    #[should_panic]
+    #[allow(unused_must_use)]
+    fn swap_first_pos_outside_board_panics() {
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
@@ -694,15 +726,13 @@ mod tests {
 
         board.set_piece(Pos::new(1, 2), piece1);
 
-        assert!(!board.swap_pieces(Pos::new(16, 16), Pos::new(1, 2)));
-        match board.piece(Pos::new(1, 2)) {
-            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
-            _ => panic!("Wrong piece")
-        };
+        board.swap_pieces(Pos::new(16, 16), Pos::new(1, 2));
     }
 
     #[test]
-    fn swap_first_pos_very_large_not_swapped() {
+    #[should_panic]
+    #[allow(unused_must_use)]
+    fn swap_first_pos_very_large_panics() {
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
@@ -712,15 +742,13 @@ mod tests {
 
         board.set_piece(Pos::new(1, 2), piece1);
 
-        assert!(!board.swap_pieces(Pos::new(u8::MAX, u8::MAX), Pos::new(1, 2)));
-        match board.piece(Pos::new(1, 2)) {
-            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
-            _ => panic!("Wrong piece")
-        };
+        board.swap_pieces(Pos::new(u8::MAX, u8::MAX), Pos::new(1, 2));
     }
 
     #[test]
-    fn swap_second_pos_outside_board_not_swapped() {
+    #[should_panic]
+    #[allow(unused_must_use)]
+    fn swap_second_pos_outside_board_panics() {
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
@@ -730,15 +758,13 @@ mod tests {
 
         board.set_piece(Pos::new(1, 2), piece1);
 
-        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(16, 16)));
-        match board.piece(Pos::new(1, 2)) {
-            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
-            _ => panic!("Wrong piece")
-        };
+        board.swap_pieces(Pos::new(1, 2), Pos::new(16, 16));
     }
 
     #[test]
-    fn swap_second_pos_very_large_not_swapped() {
+    #[should_panic]
+    #[allow(unused_must_use)]
+    fn swap_second_pos_very_large_panics() {
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
@@ -748,11 +774,7 @@ mod tests {
 
         board.set_piece(Pos::new(1, 2), piece1);
 
-        assert!(!board.swap_pieces(Pos::new(1, 2), Pos::new(u8::MAX, u8::MAX)));
-        match board.piece(Pos::new(1, 2)) {
-            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
-            _ => panic!("Wrong piece")
-        };
+        board.swap_pieces(Pos::new(1, 2), Pos::new(u8::MAX, u8::MAX));
     }
 
     #[test]
@@ -957,6 +979,60 @@ mod tests {
     }
 
     #[test]
+    fn set_piece_wall_old_returned() {
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+
+        match board.set_piece(Pos::new(1, 2), Piece::Wall) {
+            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
+            _ => panic!("Wrong piece")
+        };
+        assert_eq!(Piece::Wall, board.piece(Pos::new(1, 2)));
+    }
+
+    #[test]
+    fn set_piece_empty_old_returned() {
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+
+        match board.set_piece(Pos::new(1, 2), Piece::Empty) {
+            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
+            _ => panic!("Wrong piece")
+        };
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 2)));
+    }
+
+    #[test]
+    fn set_piece_duplicate_old_returned() {
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        board.set_piece(Pos::new(1, 2), piece1);
+
+        assert_eq!(piece1, board.set_piece(Pos::new(1, 2), piece1));
+        match board.piece(Pos::new(1, 2)) {
+            Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
+            _ => panic!("Wrong piece")
+        };
+    }
+
+    #[test]
     fn set_piece_present_old_piece_returned() {
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
             Box::new(|_, _, _| true),
@@ -972,6 +1048,19 @@ mod tests {
             Piece::Regular(piece_type, _) => assert_eq!(type1, piece_type),
             _ => panic!("Wrong piece")
         };
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_piece_out_of_bounds_panics() {
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), vec![
+            Box::new(|_, _, _| true),
+            Box::new(|_, _, _| true)
+        ]);
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        board.set_piece(Pos::new(16, 16), piece1);
     }
 
     #[test]

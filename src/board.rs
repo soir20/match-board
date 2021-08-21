@@ -237,6 +237,23 @@ impl Board {
         next_match
     }
 
+    /// Moves all pieces down to fill the empty spaces below them. Pieces are
+    /// not moved past walls or other pieces that are unmovable. Stacks of two
+    /// pieces tall are "unstable," and the top piece will fall diagonally and
+    /// down until the top peaks have smoothed out. Generates a sequence of
+    /// moves in (from position, to position) format that makes the pieces fall
+    /// naturally.
+    pub fn trickle(&mut self) -> Vec<(Pos, Pos)> {
+        let mut moves = Vec::new();
+
+        for x in 0..self.size.width() {
+            self.trickle_column(x).into_iter().for_each(|piece_move| moves.push(piece_move));
+        }
+        self.trickle_diagonally().into_iter().for_each(|piece_move| moves.push(piece_move));
+
+        moves
+    }
+
     /// Gets the type of a piece at a certain position. If there is no regular piece
     /// at that position (i.e. it is empty or a wall), Option::None is returned.
     ///
@@ -400,9 +417,10 @@ impl Board {
     /// # Arguments
     ///
     /// * `x` - the x coordinate of the column to trickle
-    fn trickle_column(&mut self, x: u8) {
+    fn trickle_column(&mut self, x: u8) -> Vec<(Pos, Pos)> {
         let movable_south = self.movable_directions[Direction::South.value()];
         let mut empty_spaces = VecDeque::new();
+        let mut moves = Vec::new();
 
         for y in 0..self.size.height() {
             if self.empties.is_set(Pos::new(x, y)) {
@@ -410,32 +428,45 @@ impl Board {
             } else if movable_south.is_set(Pos::new(x, y)) {
                 if let Some(space_to_fill) = empty_spaces.pop_front() {
                     self.swap_always(Pos::new(x, y), Pos::new(x, space_to_fill));
+                    moves.push((Pos::new(x, y), Pos::new(x, space_to_fill)));
                 }
             } else {
                 empty_spaces.clear();
             }
         }
+
+        moves
     }
 
     /// Moves all pieces in the board diagonally and down until they can no longer be moved.
     /// Should be called after [trickle_column()](Board::trickle_column) is run on all columns.
-    fn trickle_diagonally(&mut self) {
+    fn trickle_diagonally(&mut self) -> Vec<(Pos, Pos)> {
+        let mut moves = Vec::new();
+
         for x in 0..self.size.width() {
             for y in 0..self.size.height() {
                 let piece_pos = Pos::new(x, y);
 
+                if self.empties.is_set(piece_pos) {
+                    continue;
+                }
+
                 let mut previous_trickled_pos = piece_pos;
                 let mut current_trickled_pos = self.trickle_piece(previous_trickled_pos);
                 if previous_trickled_pos != current_trickled_pos {
-                    self.trickle_column(x);
+                    self.trickle_column(x).into_iter()
+                        .for_each(|piece_move| moves.push(piece_move));
                 }
 
                 while previous_trickled_pos != current_trickled_pos {
+                    moves.push((previous_trickled_pos, current_trickled_pos));
                     previous_trickled_pos = current_trickled_pos;
                     current_trickled_pos = self.trickle_piece(previous_trickled_pos);
                 }
             }
         }
+
+        moves
     }
 
     /// Moves a piece diagonally, if possible, and then moves it down as far as possible.
@@ -461,8 +492,12 @@ impl Board {
     /// * `current_pos` - the current position of the piece to move
     /// * `to_west` - whether to move the piece west (or east if false)
     fn trickle_piece_diagonally(&mut self, current_pos: Pos, to_west: bool) -> Pos {
+        if !self.can_move_pos_down_diagonally(current_pos, to_west) {
+            return current_pos;
+        }
+
         let empty_pos = Board::move_pos_down_diagonally(current_pos, to_west);
-        let is_empty_pos = self.is_within_board(empty_pos) && self.empties.is_set(empty_pos);
+        let is_empty_pos = self.empties.is_set(empty_pos);
 
         let horizontal_dir_board = match to_west {
             true => self.movable_directions[Direction::West.value()],
@@ -536,6 +571,20 @@ impl Board {
                     |board| { *board = board.swap(first, second) }
                 );
             }
+        }
+    }
+
+    /// Checks if a position can move one space down and one space horizontally
+    /// and still be inside the board.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position to move
+    /// * `to_west` - whether to move the position west (or east if false)
+    fn can_move_pos_down_diagonally(&self, pos: Pos, to_west: bool) -> bool {
+        match to_west {
+            true => pos.x() > 0 && pos.y() > 0,
+            false => pos.x() < self.size.width() - 1 && pos.y() > 0
         }
     }
 
@@ -1422,5 +1471,115 @@ mod tests {
         assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
         assert!(next_match.board_pos().contains(&Pos::new(2, 2)));
         assert!(next_match.board_pos().contains(&Pos::new(3, 3)));
+    }
+
+    #[test]
+    fn trickle_no_layers_no_diagonals_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(0, 3), Piece::Empty);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), piece1);
+        board.set_piece(Pos::new(2, 4), Piece::Empty);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), Piece::Empty);
+        board.set_piece(Pos::new(3, 1), Piece::Empty);
+        board.set_piece(Pos::new(3, 2), Piece::Empty);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), piece1);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(0, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(2, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(2, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(3, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 5)));
+    }
+
+    #[test]
+    fn trickle_no_layers_no_diagonals_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(0, 3), Piece::Empty);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), piece1);
+        board.set_piece(Pos::new(2, 4), Piece::Empty);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), Piece::Empty);
+        board.set_piece(Pos::new(3, 1), Piece::Empty);
+        board.set_piece(Pos::new(3, 2), Piece::Empty);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), piece1);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        let expected_moves = vec![
+            (Pos::new(1, 2), Pos::new(1, 1)),
+            (Pos::new(2, 3), Pos::new(2, 0)),
+            (Pos::new(2, 5), Pos::new(2, 1)),
+            (Pos::new(3, 4), Pos::new(3, 0))
+        ];
+        assert_eq!(expected_moves, board.trickle());
     }
 }

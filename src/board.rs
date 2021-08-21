@@ -12,7 +12,9 @@ pub type PosSet = HashSet<Pos>;
 /// of the game.
 ///
 /// Positions with larger y values are higher on the board. Positions
-/// with larger x values are further right on the board.
+/// with larger x values are further right on the board. Positions start
+/// at (0, 0), so a position at (16, 16) would be outside a 16x16  board
+/// horizontally and vertically.
 ///
 /// There are three types of pieces: regular pieces, empty pieces,
 /// and walls. Regular pieces may be movable in each of the four

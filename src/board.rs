@@ -2065,8 +2065,6 @@ mod tests {
 
         board.trickle();
 
-        println!("{}", board.empties);
-
         assert_eq!(piece1, board.piece(Pos::new(0, 0)));
         assert_eq!(Piece::Empty, board.piece(Pos::new(0, 1)));
         assert_eq!(Piece::Empty, board.piece(Pos::new(0, 2)));

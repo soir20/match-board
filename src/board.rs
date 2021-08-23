@@ -619,7 +619,7 @@ mod tests {
     use std::collections::{HashSet};
     use crate::matching::MatchPattern;
     use crate::bitboard::BoardSize;
-    use enumset::enum_set;
+    use enumset::{enum_set};
     use std::panic;
 
     #[test]
@@ -2688,6 +2688,209 @@ mod tests {
             (Pos::new(2, 4), Pos::new(2, 1)),
             (Pos::new(2, 5), Pos::new(2, 2)),
             (Pos::new(2, 2), Pos::new(3, 1))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_north_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::South | Direction::East | Direction::West
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(piece2, board.piece(Pos::new(1, 1)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_north_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::South | Direction::East | Direction::West
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        let expected_moves = vec![
+            (Pos::new(1, 2), Pos::new(1, 1)),
+            (Pos::new(1, 5), Pos::new(1, 2))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_south_sets_board_for_movable() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::North | Direction::East | Direction::West
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 1)));
+        assert_eq!(piece2, board.piece(Pos::new(1, 2)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_south_generates_moves_for_movable() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::North | Direction::East | Direction::West
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        let expected_moves = vec![
+            (Pos::new(1, 5), Pos::new(1, 3))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_east_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::South | Direction::North | Direction::West
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(piece2, board.piece(Pos::new(1, 1)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_east_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::South | Direction::North | Direction::West
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        let expected_moves = vec![
+            (Pos::new(1, 2), Pos::new(1, 1)),
+            (Pos::new(1, 5), Pos::new(1, 2))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_west_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::South | Direction::North | Direction::East
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(piece2, board.piece(Pos::new(1, 1)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+    }
+
+    #[test]
+    fn trickle_no_diagonals_unmovable_west_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, enum_set!(
+            Direction::South | Direction::North | Direction::East
+        ));
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece2);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        let expected_moves = vec![
+            (Pos::new(1, 2), Pos::new(1, 1)),
+            (Pos::new(1, 5), Pos::new(1, 2))
         ];
         assert_eq!(expected_moves, board.trickle());
     }

@@ -2142,6 +2142,117 @@ mod tests {
     }
 
     #[test]
+    fn trickle_with_diagonals_blocking_wall_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), Piece::Empty);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(0, 3), Piece::Wall);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), piece1);
+
+        board.set_piece(Pos::new(1, 0), Piece::Empty);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Wall);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), Piece::Wall);
+        board.set_piece(Pos::new(2, 4), piece1);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), Piece::Empty);
+        board.set_piece(Pos::new(3, 1), piece1);
+        board.set_piece(Pos::new(3, 2), Piece::Empty);
+        board.set_piece(Pos::new(3, 3), Piece::Wall);
+        board.set_piece(Pos::new(3, 4), Piece::Empty);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        board.trickle();
+
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 2)));
+        assert_eq!(Piece::Wall, board.piece(Pos::new(0, 3)));
+        assert_eq!(piece1, board.piece(Pos::new(0, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Wall, board.piece(Pos::new(1, 3)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 2)));
+        assert_eq!(Piece::Wall, board.piece(Pos::new(2, 3)));
+        assert_eq!(piece1, board.piece(Pos::new(2, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(3, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 2)));
+        assert_eq!(Piece::Wall, board.piece(Pos::new(3, 3)));
+        assert_eq!(piece1, board.piece(Pos::new(3, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 5)));
+    }
+
+    #[test]
+    fn trickle_with_diagonals_blocking_wall_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), Piece::Empty);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(0, 3), Piece::Wall);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), piece1);
+
+        board.set_piece(Pos::new(1, 0), Piece::Empty);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Wall);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), Piece::Wall);
+        board.set_piece(Pos::new(2, 4), piece1);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), Piece::Empty);
+        board.set_piece(Pos::new(3, 1), piece1);
+        board.set_piece(Pos::new(3, 2), Piece::Empty);
+        board.set_piece(Pos::new(3, 3), Piece::Wall);
+        board.set_piece(Pos::new(3, 4), Piece::Empty);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        let expected_moves = vec![
+            (Pos::new(0, 5), Pos::new(0, 4)),
+            (Pos::new(1, 2), Pos::new(1, 0)),
+            (Pos::new(1, 5), Pos::new(1, 4)),
+            (Pos::new(3, 1), Pos::new(3, 0)),
+            (Pos::new(2, 5), Pos::new(3, 4))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
     fn trickle_with_diagonals_through_hole_sets_board() {
         let type1 = PieceType::new("first");
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
@@ -2355,6 +2466,228 @@ mod tests {
         let expected_moves = vec![
             (Pos::new(3, 5), Pos::new(2, 4)),
             (Pos::new(2, 4), Pos::new(3, 0))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
+    fn trickle_with_diagonals_west_wall_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Wall);
+        board.set_piece(Pos::new(0, 3), Piece::Empty);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), piece1);
+        board.set_piece(Pos::new(2, 4), Piece::Empty);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), Piece::Empty);
+        board.set_piece(Pos::new(3, 1), Piece::Empty);
+        board.set_piece(Pos::new(3, 2), Piece::Empty);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), piece1);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(0, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(0, 1)));
+        assert_eq!(Piece::Wall, board.piece(Pos::new(0, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(2, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(2, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(3, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 5)));
+    }
+
+    #[test]
+    fn trickle_with_diagonals_west_wall_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Wall);
+        board.set_piece(Pos::new(0, 3), Piece::Empty);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), piece1);
+        board.set_piece(Pos::new(1, 2), Piece::Empty);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), piece1);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), piece1);
+        board.set_piece(Pos::new(2, 4), Piece::Empty);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), Piece::Empty);
+        board.set_piece(Pos::new(3, 1), Piece::Empty);
+        board.set_piece(Pos::new(3, 2), Piece::Empty);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), piece1);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        let expected_moves = vec![
+            (Pos::new(1, 5), Pos::new(1, 2)),
+            (Pos::new(2, 3), Pos::new(2, 0)),
+            (Pos::new(2, 5), Pos::new(2, 1)),
+            (Pos::new(3, 4), Pos::new(3, 0)),
+            (Pos::new(1, 2), Pos::new(0, 1))
+        ];
+        assert_eq!(expected_moves, board.trickle());
+    }
+
+    #[test]
+    fn trickle_with_diagonals_east_wall_sets_board() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(0, 3), Piece::Empty);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), piece1);
+        board.set_piece(Pos::new(2, 4), piece1);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), piece1);
+        board.set_piece(Pos::new(3, 1), Piece::Empty);
+        board.set_piece(Pos::new(3, 2), Piece::Wall);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), Piece::Empty);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        board.trickle();
+
+        assert_eq!(piece1, board.piece(Pos::new(0, 0)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(0, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(1, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(1, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(1, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(2, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(2, 1)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(2, 5)));
+
+        assert_eq!(piece1, board.piece(Pos::new(3, 0)));
+        assert_eq!(piece1, board.piece(Pos::new(3, 1)));
+        assert_eq!(Piece::Wall, board.piece(Pos::new(3, 2)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 3)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 4)));
+        assert_eq!(Piece::Empty, board.piece(Pos::new(3, 5)));
+    }
+
+    #[test]
+    fn trickle_with_diagonals_east_wall_generates_moves() {
+        let type1 = PieceType::new("first");
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), Piece::Empty);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(0, 3), Piece::Empty);
+        board.set_piece(Pos::new(0, 4), Piece::Empty);
+        board.set_piece(Pos::new(0, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(1, 0), piece1);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+        board.set_piece(Pos::new(1, 5), Piece::Empty);
+
+        board.set_piece(Pos::new(2, 0), Piece::Empty);
+        board.set_piece(Pos::new(2, 1), Piece::Empty);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), piece1);
+        board.set_piece(Pos::new(2, 4), piece1);
+        board.set_piece(Pos::new(2, 5), piece1);
+
+        board.set_piece(Pos::new(3, 0), piece1);
+        board.set_piece(Pos::new(3, 1), Piece::Empty);
+        board.set_piece(Pos::new(3, 2), Piece::Wall);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), Piece::Empty);
+        board.set_piece(Pos::new(3, 5), Piece::Empty);
+
+        let expected_moves = vec![
+            (Pos::new(1, 2), Pos::new(1, 1)),
+            (Pos::new(2, 3), Pos::new(2, 0)),
+            (Pos::new(2, 4), Pos::new(2, 1)),
+            (Pos::new(2, 5), Pos::new(2, 2)),
+            (Pos::new(2, 2), Pos::new(3, 1))
         ];
         assert_eq!(expected_moves, board.trickle());
     }

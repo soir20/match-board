@@ -2095,7 +2095,7 @@ mod tests {
     }
 
     #[test]
-    fn trickle_with_diagonals_tall_power_generates_moves() {
+    fn trickle_with_diagonals_tall_tower_generates_moves() {
         let type1 = PieceType::new("first");
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 

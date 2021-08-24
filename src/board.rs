@@ -8,6 +8,9 @@ use enumset::EnumSet;
 /// A group of positions on the board.
 pub type PosSet = HashSet<Pos>;
 
+/// A function that returns true if two pieces can be swapped.
+pub type SwapRule = Box<dyn Fn(&Board, Pos, Pos) -> bool>;
+
 /// Contains zero or many pieces and represents the current state
 /// of the game.
 ///
@@ -46,7 +49,7 @@ pub type PosSet = HashSet<Pos>;
 pub struct Board {
     size: BoardSize,
     patterns: Vec<MatchPattern>,
-    swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>,
+    swap_rules: Vec<SwapRule>,
     pieces: HashMap<PieceType, BitBoard>,
     empties: BitBoard,
     movable_directions: [BitBoard; 4],
@@ -70,7 +73,7 @@ impl Board {
     ///                  are executed in the order provided after the default rule,
     ///                  so less expensive calculations should be done in earlier rules.
     pub fn new(size: BoardSize, mut patterns: Vec<MatchPattern>,
-               mut swap_rules: Vec<Box<dyn Fn(&Board, Pos, Pos) -> bool>>) -> Board {
+               mut swap_rules: Vec<SwapRule>) -> Board {
         patterns.sort_by(|a, b| b.rank().cmp(&a.rank()));
         swap_rules.insert(0, Box::from(Board::are_pieces_movable));
 

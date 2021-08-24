@@ -444,21 +444,32 @@ impl Board {
     fn trickle_diagonally(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        for x in 0..self.size.width() {
-            for y in 0..self.size.height() {
+        for y in 0..self.size.height() {
+            for x in 0..self.size.width() {
                 let piece_pos = Pos::new(x, y);
 
                 if self.empties.is_set(piece_pos) {
                     continue;
                 }
 
-                let mut previous_trickled_pos = piece_pos;
-                let mut current_trickled_pos = self.trickle_piece(previous_trickled_pos);
+                let mut previous_trickled_pos;
+                let mut current_trickled_pos = piece_pos;
 
-                while previous_trickled_pos != current_trickled_pos {
-                    moves.push((previous_trickled_pos, current_trickled_pos));
+                loop {
                     previous_trickled_pos = current_trickled_pos;
-                    current_trickled_pos = self.trickle_piece(previous_trickled_pos);
+                    current_trickled_pos = self.trickle_piece_down(previous_trickled_pos);
+                    if previous_trickled_pos != current_trickled_pos {
+                        moves.push((previous_trickled_pos, current_trickled_pos));
+                    }
+
+                    previous_trickled_pos = current_trickled_pos;
+                    current_trickled_pos = self.trickle_piece_diagonally(previous_trickled_pos);
+
+                    if previous_trickled_pos == current_trickled_pos {
+                        break;
+                    } else {
+                        moves.push((previous_trickled_pos, current_trickled_pos));
+                    }
                 }
             }
         }
@@ -466,18 +477,17 @@ impl Board {
         moves
     }
 
-    /// Moves a piece diagonally, if possible, and then moves it down as far as possible.
-    /// Returns the new position of the piece.
+    /// Moves a piece diagonally (down and horizontally). If the space to the left
+    /// is open, then the piece moves down and to the left. Otherwise, it moves down
+    /// and to the right if that space is open. Returns the new position of the piece.
     ///
     /// # Arguments
     ///
     /// * `piece_pos` - the current position of the piece
-    fn trickle_piece(&mut self, piece_pos: Pos) -> Pos {
-        let sunk_pos = self.trickle_piece_down(piece_pos);
-
-        let mut diagonally_trickled_pos = self.trickle_piece_diagonally(sunk_pos, true);
-        if diagonally_trickled_pos == sunk_pos {
-            diagonally_trickled_pos = self.trickle_piece_diagonally(sunk_pos, false);
+    fn trickle_piece_diagonally(&mut self, piece_pos: Pos) -> Pos {
+        let mut diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, true);
+        if diagonally_trickled_pos == piece_pos {
+            diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, false);
         }
 
         diagonally_trickled_pos
@@ -490,7 +500,7 @@ impl Board {
     ///
     /// * `current_pos` - the current position of the piece to move
     /// * `to_west` - whether to move the piece west (or east if false)
-    fn trickle_piece_diagonally(&mut self, current_pos: Pos, to_west: bool) -> Pos {
+    fn trickle_piece_to_side(&mut self, current_pos: Pos, to_west: bool) -> Pos {
         if !self.can_move_pos_down_diagonally(current_pos, to_west) {
             return current_pos;
         }
@@ -505,7 +515,11 @@ impl Board {
         let vertical_dir_board = self.movable_directions[Direction::South.value()];
         let movable_board = horizontal_dir_board & vertical_dir_board;
 
-        if !is_empty_pos || !(movable_board).is_set(current_pos) {
+        let adjacent_pos = Pos::new(empty_pos.x(), current_pos.y());
+        let will_adj_fill_space = vertical_dir_board.is_set(adjacent_pos)
+            && !self.empties.is_set(adjacent_pos);
+
+        if !is_empty_pos || !movable_board.is_set(current_pos) || will_adj_fill_space {
             return current_pos;
         }
 
@@ -2136,7 +2150,8 @@ mod tests {
             (Pos::new(2, 5), Pos::new(2, 3)),
             (Pos::new(3, 4), Pos::new(3, 0)),
             (Pos::new(2, 2), Pos::new(1, 1)),
-            (Pos::new(2, 3), Pos::new(3, 1))
+            (Pos::new(2, 3), Pos::new(2, 2)),
+            (Pos::new(2, 2), Pos::new(3, 1))
         ];
         assert_eq!(expected_moves, board.trickle());
     }
@@ -2357,7 +2372,8 @@ mod tests {
             (Pos::new(1, 5), Pos::new(2, 4)),
             (Pos::new(2, 4), Pos::new(2, 0)),
             (Pos::new(3, 5), Pos::new(2, 4)),
-            (Pos::new(2, 4), Pos::new(1, 0))
+            (Pos::new(2, 4), Pos::new(2, 1)),
+            (Pos::new(2, 1), Pos::new(1, 0))
         ];
         assert_eq!(expected_moves, board.trickle());
     }
@@ -2465,7 +2481,8 @@ mod tests {
 
         let expected_moves = vec![
             (Pos::new(3, 5), Pos::new(2, 4)),
-            (Pos::new(2, 4), Pos::new(3, 0))
+            (Pos::new(2, 4), Pos::new(2, 1)),
+            (Pos::new(2, 1), Pos::new(3, 0))
         ];
         assert_eq!(expected_moves, board.trickle());
     }

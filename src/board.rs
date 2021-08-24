@@ -240,12 +240,26 @@ impl Board {
         next_match
     }
 
-    /// Moves all pieces down to fill the empty spaces below them. Pieces are
-    /// not moved past walls or other pieces that are unmovable. Stacks of two
-    /// pieces tall are "unstable," and the top piece will fall diagonally and
-    /// down until the top peaks have smoothed out. Generates a sequence of
-    /// moves in (from position, to position) format that makes the pieces fall
-    /// naturally.
+    /// Moves all pieces down to fill the empty spaces below them.
+    ///
+    /// Pieces will move diagonally and down if there is an empty space there
+    /// and if there is no piece in the column next to them that will fill
+    /// that space. The piece will continue falling diagonally and then down
+    /// until there are no more empty spaces to fill.
+    ///
+    /// A piece may fall diagonally left or right, but if both spaces are open,
+    /// left is preferred.
+    ///
+    /// Pieces will not move past walls or other pieces that are unmovable and
+    /// directly adjacent. However, pieces will move past walls that are diagonally
+    /// adjacent.
+    ///
+    /// Does not fill empty spaces with new pieces.
+    ///
+    /// Marks all the spaces that change for a match check.
+    ///
+    /// Generates a sequence of moves in (from position, to position) format that
+    /// makes the pieces fall naturally.
     pub fn trickle(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 

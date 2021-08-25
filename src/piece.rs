@@ -4,33 +4,7 @@ use enumset::EnumSetType;
 use std::fmt::{Display, Formatter};
 
 /// A unique category for board pieces.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
-pub struct PieceType {
-    name: &'static str
-}
-
-impl PieceType {
-
-    /// Creates a new piece type.
-    /// # Arguments
-    ///
-    /// * `name` - the name of the type. Must be unique among all other piece types.
-    pub fn new(name: &'static str) -> PieceType {
-        PieceType { name }
-    }
-
-    /// Gets the name of this piece type.
-    pub fn name(&self) -> &str {
-        self.name
-    }
-
-}
-
-impl Display for PieceType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
+pub type PieceType = char;
 
 /// A direction that a piece could move.
 #[derive(EnumSetType, Ord, PartialOrd, Hash, Debug)]
@@ -101,20 +75,11 @@ impl Piece {
 impl Display for Piece {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match *self {
-            Piece::Regular(piece_type, _) => first_char(piece_type.name()),
+            Piece::Regular(piece_type, _) => piece_type,
             Piece::Empty => ' ',
             Piece::Wall => '#'
         })
     }
-}
-
-/// Gets the first character of a string or returns a question mark if the string is empty.
-///
-/// # Arguments
-///
-/// * `str` - the string to get the first character of. May be empty
-pub(crate) fn first_char(str: &str) -> char {
-    str.chars().next().unwrap_or('?')
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use crate::position::Pos;
 use crate::board::PosSet;
-use crate::piece::{PieceType, first_char};
+use crate::piece::PieceType;
 use std::fmt::{Display, Formatter};
 
 /// A pattern of piece positions that represents a valid match on a board.
@@ -53,7 +53,7 @@ impl Display for MatchPattern {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut str = String::new();
 
-        let type_abbreviation = first_char(self.piece_type.name());
+        let type_abbreviation = self.piece_type;
 
         let max_x = self.spaces.iter().map(|pos| pos.x()).max().unwrap_or(0);
         let max_y = self.spaces.iter().map(|pos| pos.y()).max().unwrap_or(0);
@@ -118,7 +118,7 @@ impl Display for Match<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut str = String::new();
 
-        let type_abbreviation = first_char(self.pattern().piece_type().name());
+        let type_abbreviation = self.pattern().piece_type();
 
         let max_x = self.pattern().spaces().iter().map(|pos| pos.x()).max().unwrap_or(0);
         let max_y = self.pattern().spaces().iter().map(|pos| pos.y()).max().unwrap_or(0);
@@ -151,12 +151,11 @@ mod tests {
     use crate::matching::{MatchPattern, Match};
     use std::collections::{HashSet};
     use crate::position::Pos;
-    use crate::piece::PieceType;
 
     #[test]
     fn new_pattern_empty_set_works() {
         let spaces = HashSet::new();
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
         assert!(pattern.spaces().is_empty());
     }
 
@@ -167,7 +166,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut expected_spaces = HashSet::new();
         expected_spaces.insert(Pos::new(0, 1));
@@ -184,7 +183,7 @@ mod tests {
         spaces.insert(Pos::new(5, 0));
         spaces.insert(Pos::new(9, 5));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut expected_spaces = HashSet::new();
         expected_spaces.insert(Pos::new(0, 1));
@@ -201,7 +200,7 @@ mod tests {
         spaces.insert(Pos::new(1, 5));
         spaces.insert(Pos::new(5, 10));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut expected_spaces = HashSet::new();
         expected_spaces.insert(Pos::new(0, 1));
@@ -218,7 +217,7 @@ mod tests {
         spaces.insert(Pos::new(5, 5));
         spaces.insert(Pos::new(9, 10));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut expected_spaces = HashSet::new();
         expected_spaces.insert(Pos::new(0, 1));
@@ -235,7 +234,7 @@ mod tests {
         spaces.insert(Pos::new(u8::MAX, u8::MAX - 1));
         spaces.insert(Pos::new(u8::MAX - 1, u8::MAX));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut expected_spaces = HashSet::new();
         expected_spaces.insert(Pos::new(0, 1));
@@ -252,7 +251,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
         assert_eq!(10, pattern.rank());
     }
 
@@ -263,7 +262,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut board_pos = HashSet::new();
         board_pos.insert(Pos::new(5, 1));
@@ -281,7 +280,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut board_pos = HashSet::new();
         board_pos.insert(Pos::new(5, 1));
@@ -299,7 +298,7 @@ mod tests {
         spaces.insert(Pos::new(1, 0));
         spaces.insert(Pos::new(5, 5));
 
-        let pattern = MatchPattern::new(PieceType::new("test"), spaces, 10);
+        let pattern = MatchPattern::new('t', spaces, 10);
 
         let mut board_pos = HashSet::new();
         board_pos.insert(Pos::new(5, 1));

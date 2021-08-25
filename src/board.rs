@@ -654,7 +654,7 @@ impl Board {
 mod tests {
     use crate::board::Board;
     use crate::position::Pos;
-    use crate::piece::{PieceType, Piece, Direction, ALL_DIRECTIONS};
+    use crate::piece::{Piece, Direction, ALL_DIRECTIONS};
     use std::collections::{HashSet};
     use crate::matching::MatchPattern;
     use crate::bitboard::BoardSize;
@@ -677,8 +677,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -702,8 +702,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -727,8 +727,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| false)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -752,8 +752,8 @@ mod tests {
             Box::new(|_, _, _| false),
             Box::new(|_, _, _| { panic!("Should short circuit before this") })
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -769,7 +769,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -789,7 +789,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -810,7 +810,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -826,7 +826,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -842,7 +842,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -858,7 +858,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -872,7 +872,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -890,8 +890,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, enum_set!(Direction::West | Direction::East));
 
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
@@ -916,8 +916,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, enum_set!(Direction::North | Direction::South));
 
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
@@ -942,8 +942,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
         ));
@@ -971,8 +971,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
         ));
@@ -999,8 +999,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::South | Direction::West
         ));
@@ -1027,8 +1027,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::South | Direction::East
         ));
@@ -1056,7 +1056,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         assert_eq!(Piece::Wall, board.set_piece(Pos::new(1, 2), piece1));
@@ -1073,7 +1073,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -1091,7 +1091,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -1109,7 +1109,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -1127,8 +1127,8 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type2, ALL_DIRECTIONS);
 
@@ -1146,7 +1146,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         board.set_piece(Pos::new(16, 16), piece1);
@@ -1158,7 +1158,7 @@ mod tests {
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, ALL_DIRECTIONS);
 
@@ -1174,7 +1174,7 @@ mod tests {
         pattern_pos.insert(Pos::new(3, 3));
         pattern_pos.insert(Pos::new(6, 8));
 
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
 
         let mut board = Board::new(
             BoardSize::SixteenBySixteen,
@@ -1203,7 +1203,7 @@ mod tests {
         pattern_pos.insert(Pos::new(3, 3));
         pattern_pos.insert(Pos::new(8, 8));
 
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
 
         let mut board = Board::new(
             BoardSize::SixteenBySixteen,
@@ -1239,7 +1239,7 @@ mod tests {
         pattern_pos.insert(Pos::new(3, 3));
         pattern_pos.insert(Pos::new(8, 8));
 
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
 
         let mut board = Board::new(
             BoardSize::SixteenBySixteen,
@@ -1263,7 +1263,7 @@ mod tests {
 
     #[test]
     fn next_match_trickle_match_found() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
 
         let mut pattern_pos1 = HashSet::new();
         pattern_pos1.insert(Pos::new(0, 0));
@@ -1297,13 +1297,13 @@ mod tests {
 
     #[test]
     fn next_match_matches_all_variants() {
-        let piece_type = PieceType::new("first");
+        let piece_type = 'f';
         let mut pattern_pos = HashSet::new();
         pattern_pos.insert(Pos::new(2, 2));
         pattern_pos.insert(Pos::new(3, 3));
         pattern_pos.insert(Pos::new(4, 4));
 
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
 
         let mut board = Board::new(
             BoardSize::SixteenBySixteen,
@@ -1339,8 +1339,8 @@ mod tests {
 
     #[test]
     fn next_match_does_not_match_wrong_types() {
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
         let mut pattern_pos = HashSet::new();
         pattern_pos.insert(Pos::new(2, 2));
         pattern_pos.insert(Pos::new(3, 3));
@@ -1366,7 +1366,7 @@ mod tests {
 
     #[test]
     fn next_match_matches_when_not_all_in_queue() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let mut pattern_pos = HashSet::new();
         pattern_pos.insert(Pos::new(2, 2));
         pattern_pos.insert(Pos::new(3, 3));
@@ -1398,7 +1398,7 @@ mod tests {
 
     #[test]
     fn next_match_board_state_changed_after_match_still_matches() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let mut pattern_pos = HashSet::new();
         pattern_pos.insert(Pos::new(2, 2));
         pattern_pos.insert(Pos::new(3, 3));
@@ -1432,7 +1432,7 @@ mod tests {
 
     #[test]
     fn next_match_match_overwritten_does_not_match() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let mut pattern_pos = HashSet::new();
         pattern_pos.insert(Pos::new(2, 2));
         pattern_pos.insert(Pos::new(3, 3));
@@ -1462,7 +1462,7 @@ mod tests {
 
     #[test]
     fn next_match_position_in_queue_twice_matches_twice() {
-        let piece_type = PieceType::new("first");
+        let piece_type = 'f';
         let mut pattern_pos = HashSet::new();
         pattern_pos.insert(Pos::new(2, 2));
         pattern_pos.insert(Pos::new(3, 3));
@@ -1496,8 +1496,8 @@ mod tests {
 
     #[test]
     fn next_match_two_patterns_same_rank_matching_picked() {
-        let type1 = PieceType::new("first");
-        let type2 = PieceType::new("second");
+        let type1 = 'f';
+        let type2 = 's';
 
         let mut pattern_pos1 = HashSet::new();
         pattern_pos1.insert(Pos::new(2, 2));
@@ -1534,7 +1534,7 @@ mod tests {
 
     #[test]
     fn next_match_two_patterns_different_rank_higher_picked() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
 
         let mut pattern_pos1 = HashSet::new();
         pattern_pos1.insert(Pos::new(2, 2));
@@ -1576,7 +1576,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1642,7 +1642,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1686,7 +1686,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_fills_prev_piece_space_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1752,7 +1752,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_fills_prev_piece_space_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1798,7 +1798,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1864,7 +1864,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1909,7 +1909,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -1975,7 +1975,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2021,7 +2021,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_ambiguous_sets_board_left_preferred() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2087,7 +2087,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_ambiguous_generates_moves_left_preferred() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2132,7 +2132,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_tall_tower_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2198,7 +2198,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_tall_tower_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2246,7 +2246,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_blocking_wall_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2312,7 +2312,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_blocking_wall_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2357,7 +2357,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_through_hole_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2423,7 +2423,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_through_hole_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2468,7 +2468,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_changing_directions_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2534,7 +2534,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_changing_directions_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2577,7 +2577,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_west_wall_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2643,7 +2643,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_west_wall_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2688,7 +2688,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_east_wall_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2754,7 +2754,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_east_wall_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -2799,7 +2799,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_north_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
@@ -2826,7 +2826,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_north_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
@@ -2850,7 +2850,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_south_sets_board_for_movable() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
@@ -2877,7 +2877,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_south_generates_moves_for_movable() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
@@ -2900,7 +2900,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_east_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::West
@@ -2927,7 +2927,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_east_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::West
@@ -2951,7 +2951,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_west_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::East
@@ -2978,7 +2978,7 @@ mod tests {
 
     #[test]
     fn trickle_no_diagonals_unmovable_west_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::East
@@ -3002,7 +3002,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_north_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
@@ -3043,7 +3043,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_north_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
@@ -3076,7 +3076,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_south_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
@@ -3117,7 +3117,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_south_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
@@ -3149,7 +3149,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_east_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::West
@@ -3190,7 +3190,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_east_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::West
@@ -3222,7 +3222,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_west_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::North
@@ -3263,7 +3263,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_unmovable_west_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::North
@@ -3296,7 +3296,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_north_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
@@ -3337,7 +3337,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_north_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::West
@@ -3370,7 +3370,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_south_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
@@ -3411,7 +3411,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_south_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::North | Direction::East | Direction::West
@@ -3443,7 +3443,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_east_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::West
@@ -3484,7 +3484,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_east_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::North | Direction::West
@@ -3517,7 +3517,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_west_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::North
@@ -3558,7 +3558,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_unmovable_west_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(
             Direction::South | Direction::East | Direction::North
@@ -3591,7 +3591,7 @@ mod tests {
 
     #[test]
     fn trickle_right_border_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3615,7 +3615,7 @@ mod tests {
 
     #[test]
     fn trickle_right_border_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3636,7 +3636,7 @@ mod tests {
 
     #[test]
     fn trickle_top_border_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3660,7 +3660,7 @@ mod tests {
 
     #[test]
     fn trickle_top_border_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3681,7 +3681,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_adjacent_even_towers_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3733,7 +3733,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_adjacent_even_towers_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3768,7 +3768,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_adjacent_even_towers_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3820,7 +3820,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_adjacent_even_towers_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3855,7 +3855,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_adjacent_uneven_towers_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3907,7 +3907,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_left_adjacent_uneven_towers_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3943,7 +3943,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_adjacent_uneven_towers_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -3995,7 +3995,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_right_adjacent_uneven_towers_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
         let mut board = Board::new(BoardSize::SixteenBySixteen, Vec::new(), Vec::new());
@@ -4031,7 +4031,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_piece_replaced_with_more_movable_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
@@ -4081,7 +4081,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_piece_replaced_with_more_movable_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
@@ -4117,7 +4117,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_piece_replaced_with_less_movable_sets_board() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
@@ -4165,7 +4165,7 @@ mod tests {
 
     #[test]
     fn trickle_with_diagonals_piece_replaced_with_less_movable_generates_moves() {
-        let type1 = PieceType::new("first");
+        let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 

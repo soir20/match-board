@@ -130,8 +130,8 @@ impl Board {
     ///
     /// Swapping with a piece that is empty is considered valid by default. The existing
     /// piece moves into the empty space while the other space is cleared. It is also valid
-    /// to swap a piece with itself, though this has no effect on the board besides marking
-    /// the piece for a match check.
+    /// to swap a piece with itself, though this has no effect on the board and does not
+    /// mark the piece for a match check.
     ///
     /// The order of two positions provided does not matter.
     ///
@@ -440,11 +440,12 @@ impl Board {
         let mut moves = Vec::new();
 
         for y in 0..self.size.height() {
-            if self.empties.is_set(Pos::new(x, y)) {
+            let current_pos = Pos::new(x, y);
+            if self.empties.is_set(current_pos) {
                 empty_spaces.push_back(y);
-            } else if movable_south.is_set(Pos::new(x, y)) {
+            } else if movable_south.is_set(current_pos) {
                 if let Some(space_to_fill) = empty_spaces.pop_front() {
-                    self.swap_always(Pos::new(x, y), Pos::new(x, space_to_fill));
+                    self.swap_always(current_pos, Pos::new(x, space_to_fill));
                     empty_spaces.push_back(y);
                     moves.push((Pos::new(x, y), Pos::new(x, space_to_fill)));
                 }
@@ -567,13 +568,18 @@ impl Board {
     }
 
     /// Swaps two pieces regardless of the swap rules. Pieces more than one
-    /// space apart can be swapped. Always successful.
+    /// space apart can be swapped. Always successful. Marks both spaces
+    /// for a match check if they are different.
     ///
     /// # Arguments
     ///
     /// * `first` - the position of a piece to swap
     /// * `second` - the position of another piece to swap
     fn swap_always(&mut self, first: Pos, second: Pos) {
+        if first == second {
+            return;
+        }
+
         self.last_changed.push_back(first);
         self.last_changed.push_back(second);
 
@@ -1222,6 +1228,35 @@ mod tests {
         assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
         assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
         assert!(next_match.board_pos().contains(&Pos::new(6, 6)));
+    }
+
+    #[test]
+    fn next_match_swap_self_no_match_found() {
+        let mut pattern_pos = HashSet::new();
+        pattern_pos.insert(Pos::new(2, 3));
+        pattern_pos.insert(Pos::new(3, 3));
+        pattern_pos.insert(Pos::new(8, 8));
+
+        let type1 = PieceType::new("first");
+
+        let mut board = Board::new(
+            BoardSize::SixteenBySixteen,
+            vec![MatchPattern::new(type1, pattern_pos, 1)],
+            Vec::new()
+        );
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece2 = Piece::Regular(type1, ALL_DIRECTIONS);
+        let piece3 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        board.set_piece(Pos::new(0, 1), piece1);
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(6, 6), piece3);
+        board.next_match();
+        board.next_match();
+        board.next_match();
+
+        assert!(board.swap_pieces(Pos::new(6, 6), Pos::new(6, 6)));
+        assert!(board.next_match().is_none());
     }
 
     #[test]

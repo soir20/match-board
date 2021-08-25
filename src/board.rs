@@ -1282,7 +1282,7 @@ mod tests {
         board.set_piece(Pos::new(1, 1), Piece::Empty);
         board.set_piece(Pos::new(1, 2), Piece::Empty);
 
-        for index in 0..6 {
+        for _ in 0..6 {
             board.next_match();
         }
 

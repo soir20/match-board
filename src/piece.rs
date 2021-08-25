@@ -2,12 +2,13 @@ use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
 use std::fmt::{Display, Formatter};
+use serde::{Serialize, Deserialize};
 
 /// A unique category for board pieces.
 pub type PieceType = char;
 
 /// A direction that a piece could move.
-#[derive(EnumSetType, Ord, PartialOrd, Hash, Debug)]
+#[derive(EnumSetType, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize)]
 pub enum Direction {
     North = 0,
     South = 1,
@@ -47,7 +48,7 @@ pub const ALL_DIRECTIONS: EnumSet<Direction> = enum_set!(
 /// An individual, possibly-movable piece on a board that belongs to a category.
 ///
 /// Empty pieces are always movable, while walls are never movable.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize)]
 pub enum Piece {
     Regular(PieceType, EnumSet<Direction>),
     Empty,

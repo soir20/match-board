@@ -2,9 +2,10 @@ use crate::position::Pos;
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 use primitive_types::U256;
 use std::fmt::{Display, Formatter};
+use serde::{Serialize, Deserialize};
 
 /// The size of a board as width by height.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Serialize, Deserialize)]
 pub enum BoardSize {
 
     /* These are hard-coded so we know they fit in a 256-bit integer.
@@ -64,7 +65,7 @@ impl Display for BoardSize {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Serialize, Deserialize)]
 pub(crate) struct BitBoard {
     board: U256,
     width: u8,

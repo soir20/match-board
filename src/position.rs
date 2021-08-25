@@ -1,8 +1,9 @@
 use std::ops::{Add, Sub};
 use std::fmt::{Display, Formatter};
+use serde::{Serialize, Deserialize};
 
 /// A position that represents a location in a two-dimensional plane.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Serialize, Deserialize)]
 pub struct Pos {
 
     /// The horizontal component of the position

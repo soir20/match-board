@@ -1,9 +1,10 @@
-use std::collections::{HashMap, VecDeque, HashSet};
+use std::collections::{VecDeque, HashSet};
 use crate::piece::{Piece, Direction, PieceType, ALL_DIRECTIONS};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
 use crate::bitboard::{BitBoard, BoardSize};
 use enumset::EnumSet;
+use crate::board_state::BoardState;
 
 /// A group of positions on the board.
 pub type PosSet = HashSet<Pos>;
@@ -47,13 +48,9 @@ pub type SwapRule = Box<dyn Fn(&Board, Pos, Pos) -> bool>;
 /// The board's lack of default restrictions allows games to implement
 /// their own unique or non-standard rules.
 pub struct Board {
-    size: BoardSize,
     patterns: Vec<MatchPattern>,
     swap_rules: Vec<SwapRule>,
-    pieces: HashMap<PieceType, BitBoard>,
-    empties: BitBoard,
-    movable_directions: [BitBoard; 4],
-    last_changed: VecDeque<Pos>
+    state: BoardState
 }
 
 impl Board {
@@ -78,19 +75,17 @@ impl Board {
         swap_rules.insert(0, Box::from(Board::are_pieces_movable));
 
         Board {
-            size,
             patterns,
             swap_rules,
-            pieces: HashMap::new(),
-            empties: BitBoard::new(size),
-            movable_directions: [
-                BitBoard::new(size),
-                BitBoard::new(size),
-                BitBoard::new(size),
-                BitBoard::new(size)
-            ],
-            last_changed: VecDeque::new()
+            state: BoardState::new(size)
         }
+    }
+
+    /// Gets the current state of the board, which is (de)serializable and is
+    /// useful for saving the board. Use other board methods to mutate the
+    /// board's state.
+    pub fn state(&self) -> &BoardState {
+        &self.state
     }
 
     /// Gets a piece at the given position on the board. By default,
@@ -108,7 +103,7 @@ impl Board {
             panic!("Tried to get piece outside board: {}", pos);
         }
 
-        if self.empties.is_set(pos) {
+        if self.state.empties.is_set(pos) {
             return Piece::Empty;
         }
 
@@ -174,30 +169,30 @@ impl Board {
             panic!("Tried to set piece out of bounds: {}", pos);
         }
 
-        self.last_changed.push_back(pos);
+        self.state.last_changed.push_back(pos);
         let old_piece = self.piece(pos);
 
         if let Some(piece_type) = self.piece_type(pos) {
-            self.pieces.entry(piece_type).and_modify(
+            self.state.pieces.entry(piece_type).and_modify(
                 |board| { *board = board.unset(pos) }
             );
         }
 
         match piece {
             Piece::Regular(piece_type, directions) => {
-                let size = self.size;
-                self.pieces.entry(piece_type).and_modify(
+                let size = self.state.size;
+                self.state.pieces.entry(piece_type).and_modify(
                     |board| { *board = board.set(pos) }
                 ).or_insert_with(|| BitBoard::new(size).set(pos));
-                self.empties = self.empties.unset(pos);
+                self.state.empties = self.state.empties.unset(pos);
                 self.set_movable_directions(pos, directions);
             },
             Piece::Empty => {
-                self.empties = self.empties.set(pos);
+                self.state.empties = self.state.empties.set(pos);
                 self.set_movable_directions(pos, ALL_DIRECTIONS);
             },
             Piece::Wall => {
-                self.empties = self.empties.unset(pos);
+                self.state.empties = self.state.empties.unset(pos);
                 self.set_movable_directions(pos, EnumSet::new());
             }
         };
@@ -218,9 +213,9 @@ impl Board {
         let mut next_match = None;
 
         while next_match.is_none() {
-            next_pos = self.last_changed.pop_front()?;
+            next_pos = self.state.last_changed.pop_front()?;
 
-            let boards = &self.pieces;
+            let boards = &self.state.pieces;
 
             next_match = self.patterns.iter().find_map(|pattern| {
                 if let Some(board) = boards.get(&pattern.piece_type()) {
@@ -263,7 +258,7 @@ impl Board {
     pub fn trickle(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        for x in 0..self.size.width() {
+        for x in 0..self.state.size.width() {
             self.trickle_column(x).into_iter().for_each(|piece_move| moves.push(piece_move));
         }
         self.trickle_diagonally().into_iter().for_each(|piece_move| moves.push(piece_move));
@@ -278,7 +273,7 @@ impl Board {
     ///
     /// * `pos` - the position of the piece whose type to find
     fn piece_type(&self, pos: Pos) -> Option<PieceType> {
-        self.pieces.iter().find_map(|(&piece_type, board)|
+        self.state.pieces.iter().find_map(|(&piece_type, board)|
             match board.is_set(pos) {
                 true => Some(piece_type),
                 false => None
@@ -297,7 +292,7 @@ impl Board {
         let mut directions = EnumSet::new();
 
         for direction in ALL_DIRECTIONS {
-            if self.movable_directions[direction.value()].is_set(pos) {
+            if self.state.movable_directions[direction.value()].is_set(pos) {
                 directions.insert(direction);
             }
         }
@@ -315,9 +310,11 @@ impl Board {
         for direction in ALL_DIRECTIONS {
             let ordinal = direction.value();
             if directions.contains(direction) {
-                self.movable_directions[ordinal] = self.movable_directions[ordinal].set(pos);
+                self.state.movable_directions[ordinal] =
+                    self.state.movable_directions[ordinal].set(pos);
             } else {
-                self.movable_directions[ordinal] = self.movable_directions[ordinal].unset(pos);
+                self.state.movable_directions[ordinal] =
+                    self.state.movable_directions[ordinal].unset(pos);
             }
         }
     }
@@ -356,9 +353,9 @@ impl Board {
     /// * `to` - the position where the piece will be moved
     fn is_vertically_movable(&self, from: Pos, to: Pos) -> bool {
         if to.y() > from.y() {
-            return self.movable_directions[Direction::North.value()].is_set(from);
+            return self.state.movable_directions[Direction::North.value()].is_set(from);
         } else if to.y() < from.y() {
-            return self.movable_directions[Direction::South.value()].is_set(from);
+            return self.state.movable_directions[Direction::South.value()].is_set(from);
         }
 
         true
@@ -374,9 +371,9 @@ impl Board {
     /// * `to` - the position where the piece will be moved
     fn is_horizontally_movable(&self, from: Pos, to: Pos) -> bool {
         if to.x() > from.x() {
-            return self.movable_directions[Direction::East.value()].is_set(from);
+            return self.state.movable_directions[Direction::East.value()].is_set(from);
         } else if to.x() < from.x() {
-            return self.movable_directions[Direction::West.value()].is_set(from);
+            return self.state.movable_directions[Direction::West.value()].is_set(from);
         }
 
         true
@@ -437,13 +434,13 @@ impl Board {
     ///
     /// * `x` - the x coordinate of the column to trickle
     fn trickle_column(&mut self, x: u8) -> Vec<(Pos, Pos)> {
-        let movable_south = self.movable_directions[Direction::South.value()];
+        let movable_south = self.state.movable_directions[Direction::South.value()];
         let mut empty_spaces = VecDeque::new();
         let mut moves = Vec::new();
 
-        for y in 0..self.size.height() {
+        for y in 0..self.state.size.height() {
             let current_pos = Pos::new(x, y);
-            if self.empties.is_set(current_pos) {
+            if self.state.empties.is_set(current_pos) {
                 empty_spaces.push_back(y);
             } else if movable_south.is_set(current_pos) {
                 if let Some(space_to_fill) = empty_spaces.pop_front() {
@@ -464,11 +461,11 @@ impl Board {
     fn trickle_diagonally(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        for y in 0..self.size.height() {
-            for x in 0..self.size.width() {
+        for y in 0..self.state.size.height() {
+            for x in 0..self.state.size.width() {
                 let piece_pos = Pos::new(x, y);
 
-                if self.empties.is_set(piece_pos) {
+                if self.state.empties.is_set(piece_pos) {
                     continue;
                 }
 
@@ -526,18 +523,18 @@ impl Board {
         }
 
         let empty_pos = Board::move_pos_down_diagonally(current_pos, to_west);
-        let is_empty_pos = self.empties.is_set(empty_pos);
+        let is_empty_pos = self.state.empties.is_set(empty_pos);
 
         let horizontal_dir_board = match to_west {
-            true => self.movable_directions[Direction::West.value()],
-            false => self.movable_directions[Direction::East.value()]
+            true => self.state.movable_directions[Direction::West.value()],
+            false => self.state.movable_directions[Direction::East.value()]
         };
-        let vertical_dir_board = self.movable_directions[Direction::South.value()];
+        let vertical_dir_board = self.state.movable_directions[Direction::South.value()];
         let movable_board = horizontal_dir_board & vertical_dir_board;
 
         let adjacent_pos = Pos::new(empty_pos.x(), current_pos.y());
         let will_adj_fill_space = vertical_dir_board.is_set(adjacent_pos)
-            && !self.empties.is_set(adjacent_pos);
+            && !self.state.empties.is_set(adjacent_pos);
 
         if !is_empty_pos || !movable_board.is_set(current_pos) || will_adj_fill_space {
             return current_pos;
@@ -555,13 +552,13 @@ impl Board {
     ///
     /// * `piece_pos` - the current position of the piece to move
     fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
-        let vertical_dir_board = self.movable_directions[Direction::South.value()];
+        let vertical_dir_board = self.state.movable_directions[Direction::South.value()];
         if !vertical_dir_board.is_set(piece_pos){
             return piece_pos;
         }
 
         let mut next_y = piece_pos.y();
-        while next_y > 0 && self.empties.is_set(Pos::new(piece_pos.x(), next_y - 1)) {
+        while next_y > 0 && self.state.empties.is_set(Pos::new(piece_pos.x(), next_y - 1)) {
             next_y -= 1;
         }
         self.swap_always(piece_pos, Pos::new(piece_pos.x(), next_y));
@@ -582,15 +579,15 @@ impl Board {
             return;
         }
 
-        self.last_changed.push_back(first);
-        self.last_changed.push_back(second);
+        self.state.last_changed.push_back(first);
+        self.state.last_changed.push_back(second);
 
-        self.empties = self.empties.swap(first, second);
-        self.movable_directions = [
-            self.movable_directions[0].swap(first, second),
-            self.movable_directions[1].swap(first, second),
-            self.movable_directions[2].swap(first, second),
-            self.movable_directions[3].swap(first, second)
+        self.state.empties = self.state.empties.swap(first, second);
+        self.state.movable_directions = [
+            self.state.movable_directions[0].swap(first, second),
+            self.state.movable_directions[1].swap(first, second),
+            self.state.movable_directions[2].swap(first, second),
+            self.state.movable_directions[3].swap(first, second)
         ];
 
         let possible_first_type = self.piece_type(first);
@@ -599,13 +596,13 @@ impl Board {
         // We don't want to undo the swap if both pieces are of the same type
         if possible_first_type != possible_second_type {
             if let Some(first_type) = possible_first_type {
-                self.pieces.entry(first_type).and_modify(
+                self.state.pieces.entry(first_type).and_modify(
                     |board| { *board = board.swap(first, second) }
                 );
             }
 
             if let Some(second_type) = possible_second_type {
-                self.pieces.entry(second_type).and_modify(
+                self.state.pieces.entry(second_type).and_modify(
                     |board| { *board = board.swap(first, second) }
                 );
             }
@@ -622,7 +619,7 @@ impl Board {
     fn can_move_pos_down_diagonally(&self, pos: Pos, to_west: bool) -> bool {
         match to_west {
             true => pos.x() > 0 && pos.y() > 0,
-            false => pos.x() < self.size.width() - 1 && pos.y() > 0
+            false => pos.x() < self.state.size.width() - 1 && pos.y() > 0
         }
     }
 
@@ -645,7 +642,7 @@ impl Board {
     ///
     /// * `pos` - the position to check
     fn is_within_board(&self, pos: Pos) -> bool {
-        pos.x() < self.size.width() && pos.y() < self.size.height()
+        pos.x() < self.state.size.width() && pos.y() < self.state.size.height()
     }
 
 }

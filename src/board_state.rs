@@ -26,7 +26,9 @@ impl BoardState {
     ///
     /// # Arguments
     ///
-    /// * `size` - the size of the board
+    /// * `size` - the size of the board. By default, all spaces are filled with walls,
+    ///            so you do not need to use the whole board. Use the size closest to
+    ///            the size you want.
     pub fn new(size: BoardSize) -> BoardState {
         BoardState {
             size,

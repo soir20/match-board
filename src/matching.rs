@@ -121,19 +121,18 @@ impl Display for Match<'_> {
 
         let type_abbreviation = self.pattern().piece_type();
 
-        let max_x = self.pattern().spaces().iter().map(|pos| pos.x()).max().unwrap_or(0);
-        let max_y = self.pattern().spaces().iter().map(|pos| pos.y()).max().unwrap_or(0);
+        let max_x = self.board_pos.iter().map(|pos| pos.x()).max().unwrap_or(0);
+        let max_y = self.board_pos.iter().map(|pos| pos.y()).max().unwrap_or(0);
 
-        for x in 0..max_x {
-            for y in 0..max_y {
+        for y in (0..=max_y).rev() {
+            for x in 0..=max_x {
                 let pos = Pos::new(x, y);
-
                 str.push(if pos == self.changed_pos() {
                     'X'
-                } else if self.pattern().spaces().contains(&pos) {
+                } else if self.board_pos.contains(&pos) {
                     type_abbreviation
                 } else {
-                    ' '
+                    '.'
                 });
             }
 

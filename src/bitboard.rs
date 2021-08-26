@@ -201,8 +201,8 @@ impl Not for BitBoard {
 impl Display for BitBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut str = String::new();
-        for x in 0..self.width {
-            for y in 0..self.height {
+        for y in (0..self.height).rev() {
+            for x in 0..self.width {
                 str.push(match self.is_set(Pos::new(x, y)) {
                     true => '1',
                     false => '0'

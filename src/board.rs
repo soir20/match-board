@@ -293,7 +293,7 @@ impl Board {
         let mut directions = EnumSet::new();
 
         for direction in ALL_DIRECTIONS {
-            if self.state.movable_directions[direction.value()].is_set(pos) {
+            if self.state.movable_directions[direction as usize].is_set(pos) {
                 directions.insert(direction);
             }
         }
@@ -309,7 +309,7 @@ impl Board {
     /// * `directions` the new movable directions of the piece
     fn set_movable_directions(&mut self, pos: Pos, directions: EnumSet<Direction>) {
         for direction in ALL_DIRECTIONS {
-            let ordinal = direction.value();
+            let ordinal = direction as usize;
             if directions.contains(direction) {
                 self.state.movable_directions[ordinal] =
                     self.state.movable_directions[ordinal].set(pos);
@@ -354,9 +354,9 @@ impl Board {
     /// * `to` - the position where the piece will be moved
     fn is_vertically_movable(&self, from: Pos, to: Pos) -> bool {
         if to.y() > from.y() {
-            return self.state.movable_directions[Direction::North.value()].is_set(from);
+            return self.state.movable_directions[Direction::North as usize].is_set(from);
         } else if to.y() < from.y() {
-            return self.state.movable_directions[Direction::South.value()].is_set(from);
+            return self.state.movable_directions[Direction::South as usize].is_set(from);
         }
 
         true
@@ -372,9 +372,9 @@ impl Board {
     /// * `to` - the position where the piece will be moved
     fn is_horizontally_movable(&self, from: Pos, to: Pos) -> bool {
         if to.x() > from.x() {
-            return self.state.movable_directions[Direction::East.value()].is_set(from);
+            return self.state.movable_directions[Direction::East as usize].is_set(from);
         } else if to.x() < from.x() {
-            return self.state.movable_directions[Direction::West.value()].is_set(from);
+            return self.state.movable_directions[Direction::West as usize].is_set(from);
         }
 
         true
@@ -435,7 +435,7 @@ impl Board {
     ///
     /// * `x` - the x coordinate of the column to trickle
     fn trickle_column(&mut self, x: u8) -> Vec<(Pos, Pos)> {
-        let movable_south = self.state.movable_directions[Direction::South.value()];
+        let movable_south = self.state.movable_directions[Direction::South as usize];
         let mut empty_spaces = VecDeque::new();
         let mut moves = Vec::new();
 
@@ -527,10 +527,10 @@ impl Board {
         let is_empty_pos = self.state.empties.is_set(empty_pos);
 
         let horizontal_dir_board = match to_west {
-            true => self.state.movable_directions[Direction::West.value()],
-            false => self.state.movable_directions[Direction::East.value()]
+            true => self.state.movable_directions[Direction::West as usize],
+            false => self.state.movable_directions[Direction::East as usize]
         };
-        let vertical_dir_board = self.state.movable_directions[Direction::South.value()];
+        let vertical_dir_board = self.state.movable_directions[Direction::South as usize];
         let movable_board = horizontal_dir_board & vertical_dir_board;
 
         let adjacent_pos = Pos::new(empty_pos.x(), current_pos.y());
@@ -553,7 +553,7 @@ impl Board {
     ///
     /// * `piece_pos` - the current position of the piece to move
     fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
-        let vertical_dir_board = self.state.movable_directions[Direction::South.value()];
+        let vertical_dir_board = self.state.movable_directions[Direction::South as usize];
         if !vertical_dir_board.is_set(piece_pos){
             return piece_pos;
         }

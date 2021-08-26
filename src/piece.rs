@@ -16,20 +16,6 @@ pub enum Direction {
     West = 3
 }
 
-impl Direction {
-
-    /// Converts the enum to a unique numerical value.
-    pub fn value(&self) -> usize {
-        match *self {
-            Direction::North => 0,
-            Direction::South => 1,
-            Direction::East => 2,
-            Direction::West => 3
-        }
-    }
-
-}
-
 impl Display for Direction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match *self {

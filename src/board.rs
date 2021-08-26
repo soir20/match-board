@@ -5,6 +5,7 @@ use crate::matching::{MatchPattern, Match};
 use crate::bitboard::{BitBoard, BoardSize};
 use enumset::EnumSet;
 use crate::board_state::BoardState;
+use std::fmt::{Debug, Formatter, Display};
 
 /// A group of positions on the board.
 pub type PosSet = HashSet<Pos>;
@@ -645,6 +646,31 @@ impl Board {
         pos.x() < self.state.size.width() && pos.y() < self.state.size.height()
     }
 
+}
+
+impl Debug for Board {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("")
+            .field(&self.patterns)
+            .field(&self.state)
+            .finish()
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut str = String::new();
+
+        for y in (0..self.state.size.height()).rev() {
+            for x in 0..self.state.size.width() {
+                str.push_str(&self.piece(Pos::new(x, y)).to_string());
+            }
+
+            str.push('\n');
+        }
+
+        write!(f, "{}", str)
+    }
 }
 
 #[cfg(test)]

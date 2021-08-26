@@ -2,7 +2,7 @@ use std::collections::{VecDeque, HashSet};
 use crate::piece::{Piece, Direction, PieceType, ALL_DIRECTIONS};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
-use crate::bitboard::{BitBoard, BoardSize};
+use crate::bitboard::BitBoard;
 use enumset::EnumSet;
 use crate::board_state::BoardState;
 use std::fmt::{Debug, Formatter, Display};

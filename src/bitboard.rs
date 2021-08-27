@@ -248,7 +248,8 @@ impl Display for BitBoard {
 
 #[cfg(test)]
 mod tests {
-    use crate::bitboard::BoardSize;
+    use crate::bitboard::{BoardSize, BitBoard};
+    use crate::position::Pos;
 
     #[test]
     fn size_width_gets_width() {
@@ -264,4 +265,285 @@ mod tests {
     fn size_display_has_width_by_height() {
         assert_eq!("8x32", format!("{}", BoardSize::EightByThirtyTwo));
     }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_is_set_out_of_bounds_x_panics() {
+        assert!(BitBoard::new(BoardSize::FifteenBySeventeen).is_set(Pos::new(15, 5)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_is_set_out_of_bounds_y_panics() {
+        assert!(BitBoard::new(BoardSize::FifteenBySeventeen).is_set(Pos::new(5, 17)));
+    }
+
+    #[test]
+    fn bitboard_set_previously_unset() {
+        let pos = Pos::new(1, 3);
+        assert!(BitBoard::new(BoardSize::SixteenBySixteen).set(pos).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_set_previously_set() {
+        let pos = Pos::new(1, 3);
+        assert!(BitBoard::new(BoardSize::SixteenBySixteen).set(pos).set(pos).is_set(pos));
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_set_out_of_bounds_x_panics() {
+        let pos = Pos::new(16, 5);
+        BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_set_out_of_bounds_y_panics() {
+        let pos = Pos::new(5, 16);
+        BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+    }
+
+    #[test]
+    fn bitboard_unset_previously_unset() {
+        let pos = Pos::new(1, 3);
+        assert!(!BitBoard::new(BoardSize::SixteenBySixteen).unset(pos).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_unset_previously_set() {
+        let pos = Pos::new(1, 3);
+        assert!(!BitBoard::new(BoardSize::SixteenBySixteen).set(pos).unset(pos).is_set(pos));
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_unset_out_of_bounds_x_panics() {
+        let pos = Pos::new(15, 5);
+        BitBoard::new(BoardSize::FifteenBySeventeen).unset(pos);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_unset_out_of_bounds_y_panics() {
+        let pos = Pos::new(5, 17);
+        BitBoard::new(BoardSize::FifteenBySeventeen).unset(pos);
+    }
+
+    #[test]
+    fn bitboard_swap_both_unset() {
+        let pos1 = Pos::new(1, 3);
+        let pos2 = Pos::new(0, 5);
+        let board = BitBoard::new(BoardSize::SixteenBySixteen).swap(pos1, pos2);
+        assert!(!board.is_set(pos1));
+        assert!(!board.is_set(pos2));
+    }
+
+    #[test]
+    fn bitboard_swap_both_set() {
+        let pos1 = Pos::new(1, 3);
+        let pos2 = Pos::new(0, 5);
+        let board = BitBoard::new(BoardSize::SixteenBySixteen)
+            .set(pos1)
+            .set(pos2)
+            .swap(pos1, pos2);
+        assert!(board.is_set(pos1));
+        assert!(board.is_set(pos2));
+    }
+
+    #[test]
+    fn bitboard_swap_first_set() {
+        let pos1 = Pos::new(1, 3);
+        let pos2 = Pos::new(0, 5);
+        let board = BitBoard::new(BoardSize::SixteenBySixteen)
+            .set(pos1)
+            .swap(pos1, pos2);
+        assert!(!board.is_set(pos1));
+        assert!(board.is_set(pos2));
+    }
+
+    #[test]
+    fn bitboard_swap_second_set() {
+        let pos1 = Pos::new(1, 3);
+        let pos2 = Pos::new(0, 5);
+        let board = BitBoard::new(BoardSize::SixteenBySixteen)
+            .set(pos2)
+            .swap(pos1, pos2);
+        assert!(board.is_set(pos1));
+        assert!(!board.is_set(pos2));
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_swap_out_of_bounds_first_x_panics() {
+        let pos1 = Pos::new(15, 3);
+        let pos2 = Pos::new(0, 5);
+        BitBoard::new(BoardSize::FifteenBySeventeen).swap(pos1, pos2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_swap_out_of_bounds_first_y_panics() {
+        let pos1 = Pos::new(1, 17);
+        let pos2 = Pos::new(0, 5);
+        BitBoard::new(BoardSize::FifteenBySeventeen).swap(pos1, pos2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_swap_out_of_bounds_second_x_panics() {
+        let pos1 = Pos::new(1, 3);
+        let pos2 = Pos::new(15, 5);
+        BitBoard::new(BoardSize::FifteenBySeventeen).swap(pos1, pos2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitboard_swap_out_of_bounds_second_y_panics() {
+        let pos1 = Pos::new(1, 3);
+        let pos2 = Pos::new(0, 17);
+        BitBoard::new(BoardSize::FifteenBySeventeen).swap(pos1, pos2);
+    }
+
+    #[test]
+    fn bitboard_and_both_unset() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen);
+        let board2 = board1;
+        assert!(!(board1 & board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_and_both_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        let board2 = board1;
+        assert!((board1 & board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_and_first_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        let board2 = BitBoard::new(BoardSize::SixteenBySixteen);
+        assert!(!(board1 & board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_and_second_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen);
+        let board2 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        assert!(!(board1 & board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_or_both_unset() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen);
+        let board2 = board1;
+        assert!(!(board1 | board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_or_both_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        let board2 = board1;
+        assert!((board1 | board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_or_first_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        let board2 = BitBoard::new(BoardSize::SixteenBySixteen);
+        assert!((board1 | board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_or_second_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen);
+        let board2 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        assert!((board1 | board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_xor_both_unset() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen);
+        let board2 = board1;
+        assert!(!(board1 ^ board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_xor_both_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        let board2 = board1;
+        assert!(!(board1 ^ board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_xor_first_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        let board2 = BitBoard::new(BoardSize::SixteenBySixteen);
+        assert!((board1 ^ board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_xor_second_set() {
+        let pos = Pos::new(1, 3);
+        let board1 = BitBoard::new(BoardSize::SixteenBySixteen);
+        let board2 = BitBoard::new(BoardSize::SixteenBySixteen).set(pos);
+        assert!((board1 ^ board2).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_not_unset() {
+        let pos = Pos::new(1, 3);
+        assert!((!BitBoard::new(BoardSize::SixteenBySixteen)).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_not_set() {
+        let pos = Pos::new(1, 3);
+        assert!(!(!BitBoard::new(BoardSize::SixteenBySixteen).set(pos)).is_set(pos));
+    }
+
+    #[test]
+    fn bitboard_display_shows_state() {
+        let board = BitBoard::new(BoardSize::FifteenBySeventeen)
+            .set(Pos::new(14, 16))
+            .set(Pos::new(3, 4))
+            .set(Pos::new(2, 2))
+            .set(Pos::new(10, 4))
+            .unset(Pos::new(10, 4))
+            .set(Pos::new(11, 7));
+
+        let expected = "\
+        000000000000001\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000000000001000\
+        \n000000000000000\
+        \n000000000000000\
+        \n000100000000000\
+        \n000000000000000\
+        \n001000000000000\
+        \n000000000000000\
+        \n000000000000000\
+        \n";
+
+        assert_eq!(expected, format!("{}", board));
+    }
+
 }

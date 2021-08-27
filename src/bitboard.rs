@@ -245,3 +245,23 @@ impl Display for BitBoard {
         write!(f, "{}", str)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::bitboard::BoardSize;
+
+    #[test]
+    fn size_width_gets_width() {
+        assert_eq!(8, BoardSize::EightByThirtyTwo.width());
+    }
+
+    #[test]
+    fn size_height_gets_height() {
+        assert_eq!(32, BoardSize::EightByThirtyTwo.height());
+    }
+
+    #[test]
+    fn size_display_has_width_by_height() {
+        assert_eq!("8x32", format!("{}", BoardSize::EightByThirtyTwo));
+    }
+}

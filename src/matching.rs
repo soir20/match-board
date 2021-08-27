@@ -34,6 +34,7 @@ impl MatchPattern {
         MatchPattern { piece_type, spaces: spaces_around_origin, rank }
     }
 
+    /// Gets the type of pieces in this pattern.
     pub fn piece_type(&self) -> PieceType {
         self.piece_type
     }

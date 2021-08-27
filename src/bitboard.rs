@@ -65,6 +65,7 @@ impl Display for BoardSize {
     }
 }
 
+/// Efficiently maintains the state of a board with bits.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Serialize, Deserialize)]
 pub(crate) struct BitBoard {
     board: U256,

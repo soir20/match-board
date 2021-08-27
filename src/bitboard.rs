@@ -94,6 +94,10 @@ impl BitBoard {
     /// # Arguments
     ///
     /// * `pos` - the coordinate to check
+    ///
+    /// # Panics
+    ///
+    /// Panics if the position is outside the bitboard.
     pub fn is_set(&self, pos: Pos) -> bool {
         self.board.bit(self.bit_pos(pos))
     }
@@ -103,6 +107,10 @@ impl BitBoard {
     /// # Arguments
     ///
     /// * `pos` - the coordinate to set
+    ///
+    /// # Panics
+    ///
+    /// Panics if the position is outside the bitboard.
     pub fn set(&self, pos: Pos) -> BitBoard {
         self.change_board(self.board | (U256::one() << self.bit_pos(pos)))
     }
@@ -112,6 +120,10 @@ impl BitBoard {
     /// # Arguments
     ///
     /// * `pos` - the coordinate to unset
+    ///
+    /// # Panics
+    ///
+    /// Panics if the position is outside the bitboard.
     pub fn unset(&self, pos: Pos) -> BitBoard {
         self.change_board(self.board & !(U256::one() << self.bit_pos(pos)))
     }
@@ -121,6 +133,10 @@ impl BitBoard {
     /// # Arguments
     ///
     /// * `pos` - the coordinate to set
+    ///
+    /// # Panics
+    ///
+    /// Panics if either position is outside the bitboard.
     pub fn swap(&self, first: Pos, second: Pos) -> BitBoard {
         let bit1: U256 = self.bit(first);
         let bit2: U256 = self.bit(second);
@@ -149,7 +165,16 @@ impl BitBoard {
     /// # Arguments
     ///
     /// * `pos` - the coordinate to convert
+    ///
+    /// # Panics
+    ///
+    /// Panics if the position is outside the bitboard.
     fn bit_pos(&self, pos: Pos) -> usize {
+        if pos.x() >= self.width || pos.y() >= self.height {
+            panic!("Attempted to access position outside the bitboard: {}. \
+            \nPlease report this to https://github.com/soir20/swap-and-match-engine/issues!", pos);
+        }
+
         usize::from(pos.x() * self.width + pos.y())
     }
 
@@ -158,6 +183,10 @@ impl BitBoard {
     /// # Arguments
     ///
     /// * `pos` - the position to convert
+    ///
+    /// # Panics
+    ///
+    /// Panics if the position is outside the bitboard.
     fn bit(&self, pos: Pos) -> U256 {
         match self.is_set(pos) {
             true => U256::one(),

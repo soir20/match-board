@@ -503,9 +503,9 @@ impl Board {
     ///
     /// * `piece_pos` - the current position of the piece
     fn trickle_piece_diagonally(&mut self, piece_pos: Pos) -> Pos {
-        let mut diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, true);
+        let mut diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, true, true);
         if diagonally_trickled_pos == piece_pos {
-            diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, false);
+            diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, false, true);
         }
 
         diagonally_trickled_pos
@@ -518,7 +518,10 @@ impl Board {
     ///
     /// * `current_pos` - the current position of the piece to move
     /// * `to_west` - whether to move the piece west (or east if false)
-    fn trickle_piece_to_side(&mut self, current_pos: Pos, to_west: bool) -> Pos {
+    /// * `check_adj` - whether to check if the horizontally adjacent piece
+    ///                 will fall to fill the spot when all pieces in the row
+    ///                 are trickled
+    fn trickle_piece_to_side(&mut self, current_pos: Pos, to_west: bool, check_adj: bool) -> Pos {
         if !self.can_move_pos_down_diagonally(current_pos, to_west) {
             return current_pos;
         }
@@ -534,7 +537,7 @@ impl Board {
         let movable_board = horizontal_dir_board & vertical_dir_board;
 
         let adjacent_pos = Pos::new(empty_pos.x(), current_pos.y());
-        let will_adj_fill_space = vertical_dir_board.is_set(adjacent_pos)
+        let will_adj_fill_space = check_adj && vertical_dir_board.is_set(adjacent_pos)
             && !self.state.empties.is_set(adjacent_pos);
 
         if !is_empty_pos || !movable_board.is_set(current_pos) || will_adj_fill_space {

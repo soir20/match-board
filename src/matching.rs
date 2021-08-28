@@ -71,7 +71,7 @@ impl Display for MatchPattern {
             str.push('\n');
         }
 
-        str.push_str("\nr = ");
+        str.push_str("r = ");
         str.push_str(&self.rank().to_string());
 
         write!(f, "{}", str)
@@ -140,7 +140,7 @@ impl Display for Match<'_> {
             str.push('\n');
         }
 
-        str.push_str("\nr = ");
+        str.push_str("r = ");
         str.push_str(&self.pattern().rank().to_string());
 
         write!(f, "{}", str)
@@ -257,6 +257,37 @@ mod tests {
     }
 
     #[test]
+    fn new_pattern_created_with_type_has_type() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new('t', spaces, 10);
+        assert_eq!('t', pattern.piece_type());
+    }
+
+    #[test]
+    fn display_pattern_shows_points_at_origin() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(3, 4));
+        spaces.insert(Pos::new(4, 2));
+        spaces.insert(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new('t', spaces, 10);
+
+        let expected = "\
+        ..t\
+        \nt..\
+        \n...\
+        \n.t.\
+        \nr = 10\
+        ";
+
+        assert_eq!(expected, format!("{}", pattern));
+    }
+
+    #[test]
     fn new_match_created_with_pattern_has_pattern() {
         let mut spaces = HashSet::new();
         spaces.insert(Pos::new(0, 1));
@@ -313,5 +344,34 @@ mod tests {
 
         let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
         assert_eq!(expected_board_pos, *match1.board_pos());
+    }
+
+    #[test]
+    fn display_match_shows_points_on_board() {
+        let mut spaces = HashSet::new();
+        spaces.insert(Pos::new(0, 1));
+        spaces.insert(Pos::new(1, 0));
+        spaces.insert(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new('t', spaces, 10);
+
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(2, 1));
+        board_pos.insert(Pos::new(3, 0));
+        board_pos.insert(Pos::new(7, 5));
+
+        let match1 = Match::new(&pattern, Pos::new(3, 0), board_pos);
+
+        let expected = "\
+        .......t\
+        \n........\
+        \n........\
+        \n........\
+        \n..t.....\
+        \n...X....\
+        \nr = 10\
+        ";
+
+        assert_eq!(expected, format!("{}", match1));
     }
 }

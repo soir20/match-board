@@ -260,9 +260,9 @@ impl Board {
         let mut moves = Vec::new();
 
         for x in 0..self.state.size.width() {
-            self.trickle_column(x).into_iter().for_each(|piece_move| moves.push(piece_move));
+            moves.append(&mut self.trickle_column(x));
         }
-        self.trickle_diagonally().into_iter().for_each(|piece_move| moves.push(piece_move));
+        moves.append(&mut self.trickle_diagonally());
 
         moves
     }

@@ -1,7 +1,7 @@
 use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
-use std::fmt::{Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use serde::{Serialize, Deserialize};
 
 /// A unique category for board pieces.
@@ -18,12 +18,7 @@ pub enum Direction {
 
 impl Display for Direction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match *self {
-            Direction::North => "North",
-            Direction::South => "South",
-            Direction::East => "East",
-            Direction::West => "West"
-        })
+        Debug::fmt(self, f)
     }
 }
 
@@ -71,4 +66,25 @@ impl Display for Piece {
 
 #[cfg(test)]
 mod tests {
+    use crate::piece::Direction;
+
+    #[test]
+    fn display_direction_north_is_direction_name() {
+        assert_eq!("North", format!("{}", Direction::North));
+    }
+
+    #[test]
+    fn display_direction_south_is_direction_name() {
+        assert_eq!("South", format!("{}", Direction::South));
+    }
+
+    #[test]
+    fn display_direction_east_is_direction_name() {
+        assert_eq!("East", format!("{}", Direction::East));
+    }
+
+    #[test]
+    fn display_direction_west_is_direction_name() {
+        assert_eq!("West", format!("{}", Direction::West));
+    }
 }

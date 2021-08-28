@@ -176,7 +176,7 @@ impl BitBoard {
             \nPlease report this to https://github.com/soir20/swap-and-match-engine/issues!", pos);
         }
 
-        usize::from(pos.x() * self.width + pos.y())
+        usize::from(pos.y() * self.width + pos.x())
     }
 
     /// Gets the bit at a specific position as a 256-bit integer.
@@ -276,6 +276,17 @@ mod tests {
     #[should_panic]
     fn bitboard_is_set_out_of_bounds_y_panics() {
         assert!(BitBoard::new(BoardSize::FifteenBySeventeen).is_set(Pos::new(5, 17)));
+    }
+
+    #[test]
+    fn bitboard_modify_indices_do_not_collide() {
+        let pos = Pos::new(1, 0);
+
+        /* Collision occurs if index is calculated incorrectly: 1 * 15 + 0 == 0 * 15 + 15 ;
+           x * width + y should be y * width + x */
+        let poss_colliding_pos = Pos::new(0, 15);
+
+        assert!(!BitBoard::new(BoardSize::FifteenBySeventeen).set(pos).is_set(poss_colliding_pos));
     }
 
     #[test]

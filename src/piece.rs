@@ -1,7 +1,7 @@
 use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
-use std::fmt::{self, Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use serde::{Serialize, Deserialize};
 
 /// A unique category for board pieces.
@@ -66,7 +66,8 @@ impl Display for Piece {
 
 #[cfg(test)]
 mod tests {
-    use crate::piece::Direction;
+    use crate::piece::{Direction, Piece, ALL_DIRECTIONS};
+    use enumset::enum_set;
 
     #[test]
     fn display_direction_north_is_direction_name() {
@@ -86,5 +87,100 @@ mod tests {
     #[test]
     fn display_direction_west_is_direction_name() {
         assert_eq!("West", format!("{}", Direction::West));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_north_true() {
+        assert!(Piece::Regular('t', enum_set!(Direction::North)).is_movable(Direction::North));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_north_false() {
+        assert!(!Piece::Regular('t', enum_set!()).is_movable(Direction::North));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_south_true() {
+        assert!(Piece::Regular('t', enum_set!(Direction::South)).is_movable(Direction::South));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_south_false() {
+        assert!(!Piece::Regular('t', enum_set!()).is_movable(Direction::South));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_east_true() {
+        assert!(Piece::Regular('t', enum_set!(Direction::East)).is_movable(Direction::East));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_east_false() {
+        assert!(!Piece::Regular('t', enum_set!()).is_movable(Direction::East));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_west_true() {
+        assert!(Piece::Regular('t', enum_set!(Direction::West)).is_movable(Direction::West));
+    }
+
+    #[test]
+    fn is_movable_piece_regular_west_false() {
+        assert!(!Piece::Regular('t', enum_set!()).is_movable(Direction::West));
+    }
+
+    #[test]
+    fn is_movable_piece_empty_north_true() {
+        assert!(Piece::Empty.is_movable(Direction::North));
+    }
+
+    #[test]
+    fn is_movable_piece_empty_south_true() {
+        assert!(Piece::Empty.is_movable(Direction::South));
+    }
+
+    #[test]
+    fn is_movable_piece_empty_east_true() {
+        assert!(Piece::Empty.is_movable(Direction::East));
+    }
+
+    #[test]
+    fn is_movable_piece_east_west_true() {
+        assert!(Piece::Empty.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn is_movable_piece_wall_north_false() {
+        assert!(!Piece::Wall.is_movable(Direction::North));
+    }
+
+    #[test]
+    fn is_movable_piece_wall_south_false() {
+        assert!(!Piece::Wall.is_movable(Direction::South));
+    }
+
+    #[test]
+    fn is_movable_piece_wall_east_false() {
+        assert!(!Piece::Wall.is_movable(Direction::East));
+    }
+
+    #[test]
+    fn is_movable_piece_wall_west_false() {
+        assert!(!Piece::Wall.is_movable(Direction::West));
+    }
+
+    #[test]
+    fn display_piece_regular_type() {
+        assert_eq!("t", format!("{}", Piece::Regular('t', ALL_DIRECTIONS)));
+    }
+
+    #[test]
+    fn display_piece_empty_space() {
+        assert_eq!(" ", format!("{}", Piece::Empty));
+    }
+
+    #[test]
+    fn display_piece_wall_pound() {
+        assert_eq!("#", format!("{}", Piece::Wall));
     }
 }

@@ -4281,4 +4281,54 @@ mod tests {
         let expected_moves: Vec<(Pos, Pos)> = vec![];
         assert_eq!(expected_moves, board.trickle());
     }
+
+    #[test]
+    fn display_shows_all_pieces_with_type() {
+        let piece1 = Piece::Regular('f', ALL_DIRECTIONS);
+        let piece2 = Piece::Regular('s', ALL_DIRECTIONS);
+
+        let mut board = Board::new(BoardState::new(BoardSize::FifteenBySeventeen),
+                                   Vec::new(), Vec::new());
+
+        board.set_piece(Pos::new(1, 0), piece1);
+
+        board.set_piece(Pos::new(1, 1), piece2);
+        board.set_piece(Pos::new(1, 2), piece1);
+        board.set_piece(Pos::new(1, 3), Piece::Empty);
+        board.set_piece(Pos::new(1, 4), Piece::Empty);
+
+        board.set_piece(Pos::new(2, 0), piece2);
+        board.set_piece(Pos::new(2, 1), piece2);
+        board.set_piece(Pos::new(2, 2), Piece::Empty);
+        board.set_piece(Pos::new(2, 3), Piece::Empty);
+        board.set_piece(Pos::new(2, 4), Piece::Empty);
+
+        board.set_piece(Pos::new(3, 0), piece2);
+        board.set_piece(Pos::new(3, 1), piece1);
+        board.set_piece(Pos::new(3, 2), piece1);
+        board.set_piece(Pos::new(3, 3), Piece::Empty);
+        board.set_piece(Pos::new(3, 4), piece2);
+
+        let expected = "\
+        ###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n###############\
+        \n#  s###########\
+        \n#   ###########\
+        \n#f f###########\
+        \n#ssf###########\
+        \n#fss###########\
+        \n";
+
+        assert_eq!(expected, format!("{}", board));
+    }
 }

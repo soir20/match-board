@@ -76,16 +76,9 @@ impl Sub for Pos {
 }
 
 impl Display for Pos {
-
-    /// Returns a formatted position as (horizontal, vertical).
-    ///
-    /// # Arguments
-    ///
-    /// * `formatter` - represents formatting options. Used internally by Rust.
-    fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "({}, {})", self.x, self.y)
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
     }
-
 }
 
 #[cfg(test)]

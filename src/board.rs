@@ -464,31 +464,51 @@ impl Board {
 
         for y in 0..self.state.size.height() {
             for x in 0..self.state.size.width() {
-                let piece_pos = Pos::new(x, y);
+                moves.append(&mut self.trickle_piece(Pos::new(x, y), true));
+            }
+        }
 
-                if self.state.empties.is_set(piece_pos) {
-                    continue;
-                }
+        moves
+    }
 
-                let mut previous_trickled_pos;
-                let mut current_trickled_pos = piece_pos;
+    /// Moves a piece down and diagonally until it can no longer be moved.
+    /// Returns the list of swaps that makes the piece fall naturally. See
+    /// [trickle()] for a complete list of rules on how the piece is
+    /// trickled.
+    ///
+    /// # Arguments
+    ///
+    /// * `piece_pos` - the position of the piece to trickle
+    /// * `check_adj` - whether to check if the horizontally adjacent piece
+    ///                 will fall to fill the spot when all pieces in the row
+    ///                 are trickled
+    fn trickle_piece(&mut self, piece_pos: Pos, check_adj: bool) -> Vec<(Pos, Pos)> {
+        let mut moves = Vec::new();
 
-                loop {
-                    previous_trickled_pos = current_trickled_pos;
-                    current_trickled_pos = self.trickle_piece_down(previous_trickled_pos);
-                    if previous_trickled_pos != current_trickled_pos {
-                        moves.push((previous_trickled_pos, current_trickled_pos));
-                    }
+        if self.state.empties.is_set(piece_pos) {
+            return moves;
+        }
 
-                    previous_trickled_pos = current_trickled_pos;
-                    current_trickled_pos = self.trickle_piece_diagonally(previous_trickled_pos);
+        let mut previous_trickled_pos;
+        let mut current_trickled_pos = piece_pos;
 
-                    if previous_trickled_pos == current_trickled_pos {
-                        break;
-                    } else {
-                        moves.push((previous_trickled_pos, current_trickled_pos));
-                    }
-                }
+        loop {
+            previous_trickled_pos = current_trickled_pos;
+            current_trickled_pos = self.trickle_piece_down(previous_trickled_pos);
+            if previous_trickled_pos != current_trickled_pos {
+                moves.push((previous_trickled_pos, current_trickled_pos));
+            }
+
+            previous_trickled_pos = current_trickled_pos;
+            current_trickled_pos = self.trickle_piece_diagonally(
+                previous_trickled_pos,
+                check_adj
+            );
+
+            if previous_trickled_pos == current_trickled_pos {
+                break;
+            } else {
+                moves.push((previous_trickled_pos, current_trickled_pos));
             }
         }
 
@@ -502,10 +522,13 @@ impl Board {
     /// # Arguments
     ///
     /// * `piece_pos` - the current position of the piece
-    fn trickle_piece_diagonally(&mut self, piece_pos: Pos) -> Pos {
-        let mut diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, true, true);
+    /// * `check_adj` - whether to check if the horizontally adjacent piece
+    ///                 will fall to fill the spot when all pieces in the row
+    ///                 are trickled
+    fn trickle_piece_diagonally(&mut self, piece_pos: Pos, check_adj: bool) -> Pos {
+        let mut diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, true, check_adj);
         if diagonally_trickled_pos == piece_pos {
-            diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, false, true);
+            diagonally_trickled_pos = self.trickle_piece_to_side(piece_pos, false, check_adj);
         }
 
         diagonally_trickled_pos

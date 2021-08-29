@@ -267,6 +267,34 @@ impl Board {
         moves
     }
 
+    /// Replaces a space with a piece and moves it down to fill the empty
+    /// spaces below it.
+    ///
+    /// If the piece provided is an empty piece or a wall, this method performs
+    /// identically to [set_piece()].
+    ///
+    /// A regular piece will move diagonally and down if there is an empty space
+    /// there. The piece will continue falling diagonally and then down until
+    /// there are no more empty spaces to fill.
+    ///
+    /// The piece may fall diagonally left or right, but if both spaces are open,
+    /// left is preferred.
+    ///
+    /// The piece will not move past walls or other pieces that are unmovable and
+    /// directly adjacent. However, it will move past walls that are diagonally
+    /// adjacent.
+    ///
+    /// Does not fill empty spaces with new pieces.
+    ///
+    /// Marks all the spaces that change for a match check.
+    ///
+    /// Generates a sequence of moves in (from position, to position) format that
+    /// makes the piece fall naturally.
+    pub fn add_and_trickle(&mut self, pos: Pos, piece: Piece) -> Vec<(Pos, Pos)> {
+        self.set_piece(pos, piece);
+        self.trickle_piece(pos, false)
+    }
+
     /// Gets the type of a piece at a certain position. If there is no regular piece
     /// at that position (i.e. it is empty or a wall), Option::None is returned.
     ///

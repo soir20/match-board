@@ -1374,6 +1374,40 @@ mod tests {
     }
 
     #[test]
+    fn next_match_add_trickle_match_found() {
+        let type1 = 'f';
+
+        let mut pattern_pos1 = HashSet::new();
+        pattern_pos1.insert(Pos::new(0, 0));
+        pattern_pos1.insert(Pos::new(0, 1));
+        pattern_pos1.insert(Pos::new(1, 0));
+
+        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), vec![
+            MatchPattern::new(type1, pattern_pos1, 1)
+        ], Vec::new());
+        let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
+
+        board.set_piece(Pos::new(0, 0), piece1);
+        board.set_piece(Pos::new(0, 1), piece1);
+        board.set_piece(Pos::new(0, 2), Piece::Empty);
+        board.set_piece(Pos::new(1, 0), Piece::Empty);
+        board.set_piece(Pos::new(1, 1), Piece::Empty);
+        board.set_piece(Pos::new(1, 2), Piece::Empty);
+
+        for _ in 0..6 {
+            board.next_match();
+        }
+
+        board.add_and_trickle(Pos::new(0, 2), piece1);
+
+        let next_match = board.next_match().unwrap();
+        assert_eq!(Pos::new(1, 0), next_match.changed_pos());
+        assert!(next_match.board_pos().contains(&Pos::new(0, 0)));
+        assert!(next_match.board_pos().contains(&Pos::new(1, 0)));
+        assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
+    }
+
+    #[test]
     fn next_match_matches_all_variants() {
         let piece_type = 'f';
         let mut pattern_pos = HashSet::new();

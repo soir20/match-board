@@ -175,7 +175,7 @@ impl Board {
 
         if let Some(piece_type) = self.piece_type(pos) {
             self.state.pieces.entry(piece_type).and_modify(
-                |board| { *board = board.unset(pos) }
+                |board| board.unset(pos)
             );
         }
 
@@ -183,17 +183,17 @@ impl Board {
             Piece::Regular(piece_type, directions) => {
                 let size = self.state.size;
                 self.state.pieces.entry(piece_type).and_modify(
-                    |board| { *board = board.set(pos) }
-                ).or_insert_with(|| BitBoard::new(size).set(pos));
-                self.state.empties = self.state.empties.unset(pos);
+                    |board| board.set(pos)
+                ).or_insert_with(|| { let mut board = BitBoard::new(size); board.set(pos); board });
+                self.state.empties.unset(pos);
                 self.set_movable_directions(pos, directions);
             },
             Piece::Empty => {
-                self.state.empties = self.state.empties.set(pos);
+                self.state.empties.set(pos);
                 self.set_movable_directions(pos, ALL_DIRECTIONS);
             },
             Piece::Wall => {
-                self.state.empties = self.state.empties.unset(pos);
+                self.state.empties.unset(pos);
                 self.set_movable_directions(pos, EnumSet::new());
             }
         };
@@ -339,11 +339,9 @@ impl Board {
         for direction in ALL_DIRECTIONS {
             let ordinal = direction as usize;
             if directions.contains(direction) {
-                self.state.movable_directions[ordinal] =
-                    self.state.movable_directions[ordinal].set(pos);
+                self.state.movable_directions[ordinal].set(pos);
             } else {
-                self.state.movable_directions[ordinal] =
-                    self.state.movable_directions[ordinal].unset(pos);
+                self.state.movable_directions[ordinal].unset(pos);
             }
         }
     }
@@ -463,7 +461,6 @@ impl Board {
     ///
     /// * `x` - the x coordinate of the column to trickle
     fn trickle_column(&mut self, x: u8) -> Vec<(Pos, Pos)> {
-        let movable_south = self.state.movable_directions[Direction::South as usize];
         let mut empty_spaces = VecDeque::new();
         let mut moves = Vec::new();
 
@@ -471,7 +468,7 @@ impl Board {
             let current_pos = Pos::new(x, y);
             if self.state.empties.is_set(current_pos) {
                 empty_spaces.push_back(y);
-            } else if movable_south.is_set(current_pos) {
+            } else if self.state.movable_directions[Direction::South as usize].is_set(current_pos) {
                 if let Some(space_to_fill) = empty_spaces.pop_front() {
                     self.swap_always(current_pos, Pos::new(x, space_to_fill));
                     empty_spaces.push_back(y);
@@ -581,17 +578,18 @@ impl Board {
         let is_empty_pos = self.state.empties.is_set(empty_pos);
 
         let horizontal_dir_board = match to_west {
-            true => self.state.movable_directions[Direction::West as usize],
-            false => self.state.movable_directions[Direction::East as usize]
+            true => &self.state.movable_directions[Direction::West as usize],
+            false => &self.state.movable_directions[Direction::East as usize]
         };
-        let vertical_dir_board = self.state.movable_directions[Direction::South as usize];
-        let movable_board = horizontal_dir_board & vertical_dir_board;
+        let vertical_dir_board = &self.state.movable_directions[Direction::South as usize];
+        let is_movable = horizontal_dir_board.is_set(current_pos) &&
+            vertical_dir_board.is_set(current_pos);
 
         let adjacent_pos = Pos::new(empty_pos.x(), current_pos.y());
         let will_adj_fill_space = check_adj && vertical_dir_board.is_set(adjacent_pos)
             && !self.state.empties.is_set(adjacent_pos);
 
-        if !is_empty_pos || !movable_board.is_set(current_pos) || will_adj_fill_space {
+        if !is_empty_pos || !is_movable || will_adj_fill_space {
             return current_pos;
         }
 
@@ -607,7 +605,7 @@ impl Board {
     ///
     /// * `piece_pos` - the current position of the piece to move
     fn trickle_piece_down(&mut self, piece_pos: Pos) -> Pos {
-        let vertical_dir_board = self.state.movable_directions[Direction::South as usize];
+        let vertical_dir_board = &self.state.movable_directions[Direction::South as usize];
         if !vertical_dir_board.is_set(piece_pos){
             return piece_pos;
         }
@@ -637,13 +635,11 @@ impl Board {
         self.state.last_changed.push_back(first);
         self.state.last_changed.push_back(second);
 
-        self.state.empties = self.state.empties.swap(first, second);
-        self.state.movable_directions = [
-            self.state.movable_directions[0].swap(first, second),
-            self.state.movable_directions[1].swap(first, second),
-            self.state.movable_directions[2].swap(first, second),
-            self.state.movable_directions[3].swap(first, second)
-        ];
+        self.state.empties.swap(first, second);
+        self.state.movable_directions[0].swap(first, second);
+        self.state.movable_directions[1].swap(first, second);
+        self.state.movable_directions[2].swap(first, second);
+        self.state.movable_directions[3].swap(first, second);
 
         let possible_first_type = self.piece_type(first);
         let possible_second_type = self.piece_type(second);
@@ -652,13 +648,13 @@ impl Board {
         if possible_first_type != possible_second_type {
             if let Some(first_type) = possible_first_type {
                 self.state.pieces.entry(first_type).and_modify(
-                    |board| { *board = board.swap(first, second) }
+                    |board| board.swap(first, second)
                 );
             }
 
             if let Some(second_type) = possible_second_type {
                 self.state.pieces.entry(second_type).and_modify(
-                    |board| { *board = board.swap(first, second) }
+                    |board| board.swap(first, second)
                 );
             }
         }

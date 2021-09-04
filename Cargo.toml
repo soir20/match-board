@@ -7,5 +7,5 @@ edition = "2018"
 
 [dependencies]
 enumset = { version = "1.0.7", features = ["serde"] }
-primitive-types = { version = "0.10.1", features = ["serde"] }
+bitvec = { version = "0.22.3", features = ["serde"] }
 serde = { version = "1.0.129", features = ["derive"] }

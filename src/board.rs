@@ -1,11 +1,54 @@
-use std::collections::{VecDeque, HashSet};
+use std::collections::{VecDeque, HashSet, HashMap};
 use crate::piece::{Piece, Direction, PieceType, ALL_DIRECTIONS};
 use crate::position::Pos;
 use crate::matching::{MatchPattern, Match};
 use crate::bitboard::BitBoard;
 use enumset::EnumSet;
-use crate::board_state::BoardState;
 use std::fmt::{Debug, Formatter, Display};
+use serde::{Serialize, Deserialize};
+
+/// Holds the current position of the pieces on the [Board] and the pieces
+/// marked for a match check. BoardState is separate from the [Board] because
+/// the [Board] is not (de)serializable. Thus, you can save the game by
+/// saving the board state.
+#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+pub struct BoardState {
+    pub(crate) width: u8,
+    pub(crate) height: u8,
+    pub(crate) pieces: HashMap<PieceType, BitBoard>,
+    pub(crate) empties: BitBoard,
+    pub(crate) movable_directions: [BitBoard; 4],
+    pub(crate) last_changed: VecDeque<Pos>
+}
+
+impl BoardState {
+
+    /// Creates a default board state with a given size.
+    ///
+    /// All the pieces on the board are walls by default,
+    /// and no pieces are marked for a match check.
+    ///
+    /// # Arguments
+    ///
+    /// * `width` - the horizontal size of the board to create
+    /// * `height` - the vertical size of the board to create
+    pub fn new(width: u8, height: u8) -> BoardState {
+        BoardState {
+            width,
+            height,
+            pieces: HashMap::new(),
+            empties: BitBoard::new(width, height),
+            movable_directions: [
+                BitBoard::new(width, height),
+                BitBoard::new(width, height),
+                BitBoard::new(width, height),
+                BitBoard::new(width, height)
+            ],
+            last_changed: VecDeque::new()
+        }
+    }
+
+}
 
 /// A group of positions on the board.
 pub type PosSet = HashSet<Pos>;
@@ -730,14 +773,13 @@ impl Display for Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::Board;
+    use crate::board::{Board, BoardState};
     use crate::position::Pos;
     use crate::piece::{Piece, Direction, ALL_DIRECTIONS};
     use std::collections::{HashSet};
     use crate::matching::MatchPattern;
     use enumset::{enum_set};
     use std::panic;
-    use crate::board_state::BoardState;
 
     #[test]
     #[should_panic]

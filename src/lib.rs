@@ -1,5 +1,5 @@
-pub mod piece;
-pub mod board;
-pub mod position;
-pub mod matching;
 mod bitboard;
+pub mod board;
+pub mod matching;
+pub mod piece;
+pub mod position;

@@ -1,5 +1,10 @@
 mod bitboard;
-pub mod board;
-pub mod matching;
-pub mod piece;
-pub mod position;
+mod board;
+mod matching;
+mod piece;
+mod position;
+
+pub use board::*;
+pub use matching::*;
+pub use piece::*;
+pub use position::*;

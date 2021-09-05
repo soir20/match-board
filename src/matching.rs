@@ -1,7 +1,9 @@
-use crate::position::Pos;
 use crate::board::PosSet;
 use crate::piece::PieceType;
+use crate::position::Pos;
+
 use std::fmt::{Display, Formatter};
+
 use serde::{Serialize, Deserialize};
 
 /// A pattern of piece positions that represents a valid match on a board.

@@ -1,7 +1,8 @@
+use std::fmt::{Debug, Display, Formatter};
+
 use enumset::enum_set;
 use enumset::EnumSet;
 use enumset::EnumSetType;
-use std::fmt::{Debug, Display, Formatter};
 use serde::{Serialize, Deserialize};
 
 /// A unique category for board pieces.

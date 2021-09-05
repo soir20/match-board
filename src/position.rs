@@ -1,5 +1,6 @@
-use std::ops::{Add, Sub};
 use std::fmt::{Display, Formatter};
+use std::ops::{Add, Sub};
+
 use serde::{Serialize, Deserialize};
 
 /// A position that represents a location in a two-dimensional plane.

@@ -1,10 +1,12 @@
-use std::collections::{VecDeque, HashSet, HashMap};
+use crate::bitboard::BitBoard;
+use crate::matching::{MatchPattern, Match};
 use crate::piece::{Piece, Direction, PieceType, ALL_DIRECTIONS};
 use crate::position::Pos;
-use crate::matching::{MatchPattern, Match};
-use crate::bitboard::BitBoard;
-use enumset::EnumSet;
+
+use std::collections::{VecDeque, HashSet, HashMap};
 use std::fmt::{Debug, Formatter, Display};
+
+use enumset::EnumSet;
 use serde::{Serialize, Deserialize};
 
 /// Holds the current position of the pieces on the [Board] and the pieces

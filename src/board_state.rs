@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use crate::piece::{PieceType};
-use crate::bitboard::{BitBoard, BoardSize};
+use crate::bitboard::BitBoard;
 use crate::position::Pos;
 use serde::{Serialize, Deserialize};
 
@@ -10,7 +10,8 @@ use serde::{Serialize, Deserialize};
 /// saving the board state.
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct BoardState {
-    pub(crate) size: BoardSize,
+    pub(crate) width: u8,
+    pub(crate) height: u8,
     pub(crate) pieces: HashMap<PieceType, BitBoard>,
     pub(crate) empties: BitBoard,
     pub(crate) movable_directions: [BitBoard; 4],
@@ -26,19 +27,19 @@ impl BoardState {
     ///
     /// # Arguments
     ///
-    /// * `size` - the size of the board. By default, all spaces are filled with walls,
-    ///            so you do not need to use the whole board. Use the size closest to
-    ///            the size you want.
-    pub fn new(size: BoardSize) -> BoardState {
+    /// * `width` - the horizontal size of the board to create
+    /// * `height` - the vertical size of the board to create
+    pub fn new(width: u8, height: u8) -> BoardState {
         BoardState {
-            size,
+            width,
+            height,
             pieces: HashMap::new(),
-            empties: BitBoard::new(size),
+            empties: BitBoard::new(width, height),
             movable_directions: [
-                BitBoard::new(size),
-                BitBoard::new(size),
-                BitBoard::new(size),
-                BitBoard::new(size)
+                BitBoard::new(width, height),
+                BitBoard::new(width, height),
+                BitBoard::new(width, height),
+                BitBoard::new(width, height)
             ],
             last_changed: VecDeque::new()
         }

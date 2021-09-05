@@ -181,10 +181,15 @@ impl Board {
 
         match piece {
             Piece::Regular(piece_type, directions) => {
-                let size = self.state.size;
+                let width = self.state.width;
+                let height = self.state.height;
                 self.state.pieces.entry(piece_type).and_modify(
                     |board| board.set(pos)
-                ).or_insert_with(|| { let mut board = BitBoard::new(size); board.set(pos); board });
+                ).or_insert_with(|| {
+                    let mut board = BitBoard::new(width, height);
+                    board.set(pos);
+                    board
+                });
                 self.state.empties.unset(pos);
                 self.set_movable_directions(pos, directions);
             },
@@ -259,7 +264,7 @@ impl Board {
     pub fn trickle(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        for x in 0..self.state.size.width() {
+        for x in 0..self.state.width {
             moves.append(&mut self.trickle_column(x));
         }
         moves.append(&mut self.trickle_diagonally());
@@ -464,7 +469,7 @@ impl Board {
         let mut empty_spaces = VecDeque::new();
         let mut moves = Vec::new();
 
-        for y in 0..self.state.size.height() {
+        for y in 0..self.state.height {
             let current_pos = Pos::new(x, y);
             if self.state.empties.is_set(current_pos) {
                 empty_spaces.push_back(y);
@@ -487,8 +492,8 @@ impl Board {
     fn trickle_diagonally(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        for y in 0..self.state.size.height() {
-            for x in 0..self.state.size.width() {
+        for y in 0..self.state.height {
+            for x in 0..self.state.width {
                 moves.append(&mut self.trickle_piece(Pos::new(x, y), true));
             }
         }
@@ -670,7 +675,7 @@ impl Board {
     fn can_move_pos_down_diagonally(&self, pos: Pos, to_west: bool) -> bool {
         match to_west {
             true => pos.x() > 0 && pos.y() > 0,
-            false => pos.x() < self.state.size.width() - 1 && pos.y() > 0
+            false => pos.x() < self.state.width - 1 && pos.y() > 0
         }
     }
 
@@ -693,7 +698,7 @@ impl Board {
     ///
     /// * `pos` - the position to check
     fn is_within_board(&self, pos: Pos) -> bool {
-        pos.x() < self.state.size.width() && pos.y() < self.state.size.height()
+        pos.x() < self.state.width && pos.y() < self.state.height
     }
 
 }
@@ -711,8 +716,8 @@ impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut str = String::new();
 
-        for y in (0..self.state.size.height()).rev() {
-            for x in 0..self.state.size.width() {
+        for y in (0..self.state.height).rev() {
+            for x in 0..self.state.width {
                 str.push_str(&self.piece(Pos::new(x, y)).to_string());
             }
 
@@ -730,7 +735,6 @@ mod tests {
     use crate::piece::{Piece, Direction, ALL_DIRECTIONS};
     use std::collections::{HashSet};
     use crate::matching::MatchPattern;
-    use crate::bitboard::BoardSize;
     use enumset::{enum_set};
     use std::panic;
     use crate::board_state::BoardState;
@@ -738,7 +742,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_piece_out_of_bounds_panics() {
-        let board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -747,7 +751,7 @@ mod tests {
 
     #[test]
     fn swap_adjacent_all_rules_passed_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -772,7 +776,7 @@ mod tests {
 
     #[test]
     fn swap_non_adjacent_all_rules_passed_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -797,7 +801,7 @@ mod tests {
 
     #[test]
     fn swap_rules_violated_not_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| false)
         ]);
@@ -822,7 +826,7 @@ mod tests {
 
     #[test]
     fn swap_rules_violated_short_circuits() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| false),
             Box::new(|_, _, _| { panic!("Should short circuit before this") })
         ]);
@@ -839,7 +843,7 @@ mod tests {
 
     #[test]
     fn swap_empty_all_rules_passed_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -859,7 +863,7 @@ mod tests {
 
     #[test]
     fn swap_wall_all_rules_passed_not_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -880,7 +884,7 @@ mod tests {
     #[should_panic]
     #[allow(unused_must_use)]
     fn swap_first_pos_outside_board_panics() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -896,7 +900,7 @@ mod tests {
     #[should_panic]
     #[allow(unused_must_use)]
     fn swap_first_pos_very_large_panics() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -912,7 +916,7 @@ mod tests {
     #[should_panic]
     #[allow(unused_must_use)]
     fn swap_second_pos_outside_board_panics() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -928,7 +932,7 @@ mod tests {
     #[should_panic]
     #[allow(unused_must_use)]
     fn swap_second_pos_very_large_panics() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -942,7 +946,7 @@ mod tests {
 
     #[test]
     fn swap_self_all_rules_passed_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -960,7 +964,7 @@ mod tests {
 
     #[test]
     fn swap_same_vertical_not_vertically_movable_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -986,7 +990,7 @@ mod tests {
 
     #[test]
     fn swap_same_horizontal_not_horizontally_movable_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1012,7 +1016,7 @@ mod tests {
 
     #[test]
     fn swap_north_not_movable_north_not_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1041,7 +1045,7 @@ mod tests {
 
     #[test]
     fn swap_south_not_movable_south_not_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1069,7 +1073,7 @@ mod tests {
 
     #[test]
     fn swap_east_not_movable_east_not_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1097,7 +1101,7 @@ mod tests {
 
     #[test]
     fn swap_west_not_movable_west_not_swapped() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1126,7 +1130,7 @@ mod tests {
 
     #[test]
     fn set_piece_not_present_wall_returned() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1143,7 +1147,7 @@ mod tests {
 
     #[test]
     fn set_piece_wall_old_returned() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1161,7 +1165,7 @@ mod tests {
 
     #[test]
     fn set_piece_empty_old_returned() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1179,7 +1183,7 @@ mod tests {
 
     #[test]
     fn set_piece_duplicate_old_returned() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1197,7 +1201,7 @@ mod tests {
 
     #[test]
     fn set_piece_present_old_piece_returned() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1216,7 +1220,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_piece_out_of_bounds_panics() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1228,7 +1232,7 @@ mod tests {
 
     #[test]
     fn next_match_no_patterns_none() {
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), Vec::new(), vec![
+        let mut board = Board::new(BoardState::new(16, 16), Vec::new(), vec![
             Box::new(|_, _, _| true),
             Box::new(|_, _, _| true)
         ]);
@@ -1251,7 +1255,7 @@ mod tests {
         let type1 = 'f';
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1280,7 +1284,7 @@ mod tests {
         let type1 = 'f';
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1316,7 +1320,7 @@ mod tests {
         let type1 = 'f';
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1344,7 +1348,7 @@ mod tests {
         pattern_pos1.insert(Pos::new(0, 1));
         pattern_pos1.insert(Pos::new(1, 0));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), vec![
+        let mut board = Board::new(BoardState::new(16, 16), vec![
             MatchPattern::new(type1, pattern_pos1, 1)
         ], Vec::new());
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
@@ -1378,7 +1382,7 @@ mod tests {
         pattern_pos1.insert(Pos::new(0, 1));
         pattern_pos1.insert(Pos::new(1, 0));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), vec![
+        let mut board = Board::new(BoardState::new(16, 16), vec![
             MatchPattern::new(type1, pattern_pos1, 1)
         ], Vec::new());
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
@@ -1414,7 +1418,7 @@ mod tests {
         let type1 = 'f';
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1455,7 +1459,7 @@ mod tests {
         pattern_pos.insert(Pos::new(4, 4));
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type2, pattern_pos, 1)],
             Vec::new()
         );
@@ -1481,7 +1485,7 @@ mod tests {
         pattern_pos.insert(Pos::new(4, 4));
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1513,7 +1517,7 @@ mod tests {
         pattern_pos.insert(Pos::new(4, 4));
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1547,7 +1551,7 @@ mod tests {
         pattern_pos.insert(Pos::new(4, 4));
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(type1, pattern_pos, 1)],
             Vec::new()
         );
@@ -1577,7 +1581,7 @@ mod tests {
         pattern_pos.insert(Pos::new(4, 4));
 
         let mut board = Board::new(
-            BoardState::new(BoardSize::SixteenBySixteen),
+            BoardState::new(16, 16),
             vec![MatchPattern::new(piece_type, pattern_pos, 1)],
             Vec::new()
         );
@@ -1617,7 +1621,7 @@ mod tests {
         pattern_pos2.insert(Pos::new(3, 3));
         pattern_pos2.insert(Pos::new(4, 4));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), vec![
+        let mut board = Board::new(BoardState::new(16, 16), vec![
             MatchPattern::new(type2, pattern_pos1, 1),
             MatchPattern::new(type1, pattern_pos2, 1)
         ], Vec::new());
@@ -1655,7 +1659,7 @@ mod tests {
         pattern_pos2.insert(Pos::new(3, 3));
         pattern_pos2.insert(Pos::new(4, 4));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), vec![
+        let mut board = Board::new(BoardState::new(16, 16), vec![
             MatchPattern::new(type1, pattern_pos1, 1),
             MatchPattern::new(type1, pattern_pos2, 2)
         ], Vec::new());
@@ -1687,7 +1691,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -1754,7 +1758,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -1799,7 +1803,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -1866,7 +1870,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -1913,7 +1917,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -1980,7 +1984,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2026,7 +2030,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2093,7 +2097,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2140,7 +2144,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2207,7 +2211,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2253,7 +2257,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2320,7 +2324,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2369,7 +2373,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -2436,7 +2440,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -2482,7 +2486,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -2549,7 +2553,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -2595,7 +2599,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2662,7 +2666,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2706,7 +2710,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2773,7 +2777,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2819,7 +2823,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2886,7 +2890,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -2935,7 +2939,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -2963,7 +2967,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -2988,7 +2992,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3016,7 +3020,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3040,7 +3044,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3068,7 +3072,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3093,7 +3097,7 @@ mod tests {
             Direction::South | Direction::North | Direction::East
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3121,7 +3125,7 @@ mod tests {
             Direction::South | Direction::North | Direction::East
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3146,7 +3150,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3188,7 +3192,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3222,7 +3226,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3264,7 +3268,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3297,7 +3301,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3339,7 +3343,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
         board.set_piece(Pos::new(0, 0), Piece::Empty);
         board.set_piece(Pos::new(0, 1), Piece::Empty);
@@ -3372,7 +3376,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3414,7 +3418,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3448,7 +3452,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3490,7 +3494,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3524,7 +3528,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3566,7 +3570,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3599,7 +3603,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3641,7 +3645,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3675,7 +3679,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3717,7 +3721,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3748,7 +3752,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(15, 0), piece1);
@@ -3773,7 +3777,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(15, 0), piece1);
@@ -3795,7 +3799,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 10), piece1);
@@ -3820,7 +3824,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 10), piece1);
@@ -3842,7 +3846,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3895,7 +3899,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -3931,7 +3935,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -3984,7 +3988,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4020,7 +4024,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -4073,7 +4077,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -4110,7 +4114,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4163,7 +4167,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4201,7 +4205,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4252,7 +4256,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4289,7 +4293,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4338,7 +4342,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen), 
+        let mut board = Board::new(BoardState::new(16, 16), 
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -4371,7 +4375,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4396,7 +4400,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4417,7 +4421,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4470,7 +4474,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4506,7 +4510,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4573,7 +4577,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4616,7 +4620,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4683,7 +4687,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -4726,7 +4730,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -4793,7 +4797,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -4835,7 +4839,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -4902,7 +4906,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -4946,7 +4950,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -5013,7 +5017,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -5057,7 +5061,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -5124,7 +5128,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -5167,7 +5171,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -5234,7 +5238,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), piece1);
@@ -5280,7 +5284,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5308,7 +5312,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5332,7 +5336,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5360,7 +5364,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5382,7 +5386,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5410,7 +5414,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5434,7 +5438,7 @@ mod tests {
             Direction::South | Direction::North | Direction::East
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5462,7 +5466,7 @@ mod tests {
             Direction::South | Direction::North | Direction::East
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5486,7 +5490,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5528,7 +5532,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -5560,7 +5564,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -5602,7 +5606,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -5631,7 +5635,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -5673,7 +5677,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
         board.set_piece(Pos::new(0, 0), Piece::Empty);
         board.set_piece(Pos::new(0, 1), Piece::Empty);
@@ -5704,7 +5708,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -5746,7 +5750,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 0), Piece::Empty);
@@ -5777,7 +5781,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5819,7 +5823,7 @@ mod tests {
             Direction::South | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5851,7 +5855,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5893,7 +5897,7 @@ mod tests {
             Direction::North | Direction::East | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5922,7 +5926,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5964,7 +5968,7 @@ mod tests {
             Direction::South | Direction::North | Direction::West
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -5995,7 +5999,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6037,7 +6041,7 @@ mod tests {
             Direction::South | Direction::East | Direction::North
         ));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6066,7 +6070,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(15, 0), piece1);
@@ -6091,7 +6095,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(15, 0), piece1);
@@ -6112,7 +6116,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 10), piece1);
@@ -6137,7 +6141,7 @@ mod tests {
         let type1 = 'f';
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(0, 10), piece1);
@@ -6159,7 +6163,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6209,7 +6213,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6244,7 +6248,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6294,7 +6298,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6327,7 +6331,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6375,7 +6379,7 @@ mod tests {
         let piece1 = Piece::Regular(type1, ALL_DIRECTIONS);
         let piece2 = Piece::Regular(type1, enum_set!(Direction::South));
 
-        let mut board = Board::new(BoardState::new(BoardSize::SixteenBySixteen),
+        let mut board = Board::new(BoardState::new(16, 16),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);
@@ -6405,7 +6409,7 @@ mod tests {
         let piece1 = Piece::Regular('f', ALL_DIRECTIONS);
         let piece2 = Piece::Regular('s', ALL_DIRECTIONS);
 
-        let mut board = Board::new(BoardState::new(BoardSize::FifteenBySeventeen),
+        let mut board = Board::new(BoardState::new(15, 17),
                                    Vec::new(), Vec::new());
 
         board.set_piece(Pos::new(1, 0), piece1);

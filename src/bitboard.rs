@@ -4,7 +4,6 @@ use serde::{Serialize, Deserialize};
 use bitvec::bitvec;
 use bitvec::vec::BitVec;
 
-
 /// Efficiently maintains the state of a board with bits.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Serialize, Deserialize)]
 pub(crate) struct BitBoard {

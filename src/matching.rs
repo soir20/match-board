@@ -4,10 +4,9 @@ use crate::position::Pos;
 
 use std::fmt::{Display, Formatter};
 
-use serde::{Serialize, Deserialize};
-
 /// A pattern of piece positions that represents a valid match on a board.
-#[derive(Clone, Eq, PartialEq, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MatchPattern {
     piece_type: PieceType,
     spaces: PosSet,

@@ -7,13 +7,13 @@ use std::collections::{VecDeque, HashSet, HashMap};
 use std::fmt::{Debug, Formatter, Display};
 
 use enumset::EnumSet;
-use serde::{Serialize, Deserialize};
 
 /// Holds the current position of the pieces on the [Board] and the pieces
 /// marked for a match check. BoardState is separate from the [Board] because
 /// the [Board] is not (de)serializable. Thus, you can save the game by
 /// saving the board state.
-#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BoardState {
     pub(crate) width: u8,
     pub(crate) height: u8,

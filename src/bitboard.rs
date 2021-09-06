@@ -4,10 +4,10 @@ use std::fmt::{Display, Formatter};
 
 use bitvec::bitvec;
 use bitvec::vec::BitVec;
-use serde::{Serialize, Deserialize};
 
 /// Efficiently maintains the state of a board with bits.
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub(crate) struct BitBoard {
     board: BitVec,
     width: u8,

@@ -1,10 +1,9 @@
-mod bitboard;
 mod board;
 mod matching;
-mod piece;
 mod position;
+mod match_board;
 
-pub use board::*;
-pub use matching::*;
-pub use piece::*;
 pub use position::*;
+pub use matching::*;
+pub use board::*;
+pub use match_board::*;

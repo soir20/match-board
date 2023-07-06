@@ -6,9 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-enumset = "1.1.2"
-bitvec = "1.0.1"
 _serde = { package = "serde", version = "1.0.164", default-features = false, optional = true }
 
 [features]
-serde = ["_serde", "bitvec/serde", "enumset/serde"]
+serde = ["_serde"]

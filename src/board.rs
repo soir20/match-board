@@ -26,7 +26,7 @@ pub trait Piece: Copy + From<Self::MatchType> + Default + BitAnd<Output=Self> {
 /// their own unique or non-standard rules.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Board<
+pub struct BoardState<
     P,
     const WIDTH: usize,
     const HEIGHT: usize
@@ -34,11 +34,11 @@ pub struct Board<
     pieces: [[P; HEIGHT]; WIDTH]
 }
 
-impl<P: Piece, const W: usize, const H: usize> Board<P, W, H> {
+impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
 
     /// Creates a new board filled with default pieces (according to the [Default] trait).
-    pub fn new() -> Board<P, W, H> {
-        Board {
+    pub fn new() -> BoardState<P, W, H> {
+        BoardState {
             pieces: [[P::default(); H]; W]
         }
     }
@@ -106,7 +106,7 @@ impl<P: Piece, const W: usize, const H: usize> Board<P, W, H> {
 
 }
 
-impl<P: Piece, const W: usize, const H: usize> Default for Board<P, W, H> {
+impl<P: Piece, const W: usize, const H: usize> Default for BoardState<P, W, H> {
     fn default() -> Self {
         Self::new()
     }
@@ -115,7 +115,7 @@ impl<P: Piece, const W: usize, const H: usize> Default for Board<P, W, H> {
 #[cfg(test)]
 mod tests {
     use std::ops::BitAnd;
-    use crate::{Board, Piece, Pos};
+    use crate::{BoardState, Piece, Pos};
 
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
     enum TestPiece {
@@ -158,33 +158,33 @@ mod tests {
 
     #[test]
     fn get_piece_zero_zero_default_retrieved() {
-        let board: Board<TestPiece, 15, 16> = Board::new();
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
         assert_eq!(TestPiece::None, board.piece(Pos::new(0, 0)));
     }
 
     #[test]
     fn get_piece_never_set_default_retrieved() {
-        let board: Board<TestPiece, 15, 16> = Board::new();
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
         assert_eq!(TestPiece::None, board.piece(Pos::new(5, 10)));
     }
 
     #[test]
     #[should_panic]
     fn get_piece_out_of_bounds_x_panics() {
-        let board: Board<TestPiece, 15, 16> = Board::new();
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.piece(Pos::new(15, 15));
     }
 
     #[test]
     #[should_panic]
     fn get_piece_out_of_bounds_y_panics() {
-        let board: Board<TestPiece, 15, 16> = Board::new();
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.piece(Pos::new(14, 16));
     }
 
     #[test]
     fn swap_adjacent_swapped() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
         let piece2 = TestPiece::Second;
 
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn swap_non_adjacent_swapped() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
         let piece2 = TestPiece::Second;
 
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_first_pos_outside_board_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -224,7 +224,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_first_pos_very_large_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_second_pos_outside_board_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_second_pos_very_large_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn swap_self_no_change() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(1, 2), piece1);
@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn set_piece_none_previous_default_returned() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         assert_eq!(TestPiece::default(), board.set_piece(Pos::new(1, 2), piece1));
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn set_piece_one_previous_old_returned() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
         let piece2 = TestPiece::Second;
 
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn set_piece_duplicate_old_returned() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         assert_eq!(TestPiece::default(), board.set_piece(Pos::new(1, 2), piece1));
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_piece_out_of_bounds_x_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(15, 15), piece1);
@@ -307,7 +307,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_piece_out_of_bounds_y_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(14, 16), piece1);
@@ -316,7 +316,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_piece_very_large_pos_panics() {
-        let mut board: Board<TestPiece, 15, 16> = Board::new();
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(usize::MAX, usize::MAX), piece1);

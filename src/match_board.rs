@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use crate::{Board, Match, MatchPattern, Piece, Pos};
+use crate::{BoardState, Match, MatchPattern, Piece, Pos};
 
 /// Keeps track of the current board state and computes matches.
 ///
@@ -20,7 +20,7 @@ pub struct MatchBoard<
     const WIDTH: usize,
     const HEIGHT: usize
 > {
-    board: Board<P, WIDTH, HEIGHT>,
+    board: BoardState<P, WIDTH, HEIGHT>,
     last_changed: VecDeque<Pos>,
     patterns: Vec<&'a MatchPattern<M>>
 }
@@ -37,7 +37,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///                order provided. For example, if one pattern matches a column of five pieces
     ///                and another matches a column of three pieces, the column of five pattern
     ///                should probably be first.
-    pub fn new(board: Board<P, W, H>, patterns: Vec<&MatchPattern<M>>) -> MatchBoard<M, P, W, H> {
+    pub fn new(board: BoardState<P, W, H>, patterns: Vec<&MatchPattern<M>>) -> MatchBoard<M, P, W, H> {
         let mut last_changed = VecDeque::with_capacity(W * H);
         for x in 0..W {
             for y in 0..H {
@@ -53,7 +53,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     }
 
     /// Ends the current game by returning the final board state.
-    pub fn end_game(self) -> Board<P, W, H> {
+    pub fn end_game(self) -> BoardState<P, W, H> {
         self.board
     }
 
@@ -203,7 +203,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
 #[cfg(test)]
 mod tests {
     use std::ops::BitAnd;
-    use crate::{Board, MatchBoard, MatchPattern, Piece, Pos};
+    use crate::{BoardState, MatchBoard, MatchPattern, Piece, Pos};
 
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
     enum TestMatchType {
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_piece_out_of_bounds_x_panics() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn get_piece_in_bounds_returns_piece() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -279,7 +279,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_piece_out_of_bounds_y_panics() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_piece_out_of_bounds_x_panics() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn set_piece_out_of_bounds_y_panics() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_piece_first_out_of_bounds_panics() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -332,7 +332,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_piece_second_out_of_bounds_panics() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -345,7 +345,7 @@ mod tests {
     #[test]
     fn next_match_no_patterns_none() {
         let mut board: MatchBoard<TestMatchType, TestPiece, 15, 16> = MatchBoard::new(
-            Board::new(),
+            BoardState::new(),
             Vec::new()
         );
 
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn next_match_checks_initial_board() {
-        let mut board = Board::<TestPiece, 15, 16>::new();
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
 
         board.set_piece(Pos::new(0, 1), TestPiece::First);
         board.set_piece(Pos::new(1, 1), TestPiece::Both);
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn next_match_set_pieces_matches_for_all_pieces() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     fn next_match_swap_pieces_match_found_at_first() {
-        let mut board = Board::<TestPiece, 15, 16>::new();
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
 
         board.set_piece(Pos::new(0, 1), TestPiece::Second);
         board.set_piece(Pos::new(1, 1), TestPiece::Both);
@@ -430,7 +430,7 @@ mod tests {
 
     #[test]
     fn next_match_swap_pieces_match_found_at_second() {
-        let mut board = Board::<TestPiece, 15, 16>::new();
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
 
         board.set_piece(Pos::new(0, 1), TestPiece::Second);
         board.set_piece(Pos::new(1, 1), TestPiece::Both);
@@ -455,7 +455,7 @@ mod tests {
 
     #[test]
     fn next_match_swap_self_no_match() {
-        let mut board = Board::<TestPiece, 15, 16>::new();
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
 
         board.set_piece(Pos::new(0, 1), TestPiece::Second);
         board.set_piece(Pos::new(1, 1), TestPiece::Both);
@@ -478,7 +478,7 @@ mod tests {
 
     #[test]
     fn next_match_wrong_match_type_none_found() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -497,7 +497,7 @@ mod tests {
 
     #[test]
     fn next_match_matches_when_not_all_in_queue() {
-        let mut board = Board::<TestPiece, 15, 16>::new();
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
         board.set_piece(Pos::new(0, 1), TestPiece::Second);
         board.set_piece(Pos::new(1, 1), TestPiece::Both);
 
@@ -522,7 +522,7 @@ mod tests {
 
     #[test]
     fn next_match_matches_when_in_queue_twice() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -552,7 +552,7 @@ mod tests {
 
     #[test]
     fn next_match_never_matches_when_match_overwritten() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
@@ -574,7 +574,7 @@ mod tests {
 
     #[test]
     fn next_match_set_pieces_matches_earlier_pattern() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos1 = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern_pos2 = vec![
@@ -614,7 +614,7 @@ mod tests {
 
     #[test]
     fn next_match_end_game_returns_board() {
-        let board = Board::<TestPiece, 15, 16>::new();
+        let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
         let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);

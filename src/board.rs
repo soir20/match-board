@@ -2,15 +2,15 @@ use crate::position::Pos;
 
 use std::ops::BitAnd;
 
-/// A piece with one or more match types.
-pub trait Piece: Copy + From<Self::MatchType> + Default + BitAnd<Output=Self> {
+/// A piece with one or more match types. Two pieces should be equal when they match the same
+/// match types.
+pub trait Piece: Copy + From<Self::MatchType> + Default + BitAnd<Output=Self> + Eq {
 
     /// A type that all pieces in a pattern must have to create a match.
     type MatchType;
 
-    /// Whether this piece can be a part of any matches. Returns false if
-    /// this piece has no match types.
-    fn matches_any(&self) -> bool;
+    /// A piece that matches no match types.
+    const UNMATCHABLE: Self;
 
 }
 
@@ -150,10 +150,7 @@ mod tests {
 
     impl Piece for TestPiece {
         type MatchType = u8;
-
-        fn matches_any(&self) -> bool {
-            *self != TestPiece::None
-        }
+        const UNMATCHABLE: Self = Self::None;
     }
 
     #[test]

@@ -185,7 +185,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// * `piece` - piece to compare to the match type
     fn matches(match_type: M, piece: P) -> bool {
         let type_piece: P = match_type.into();
-        (type_piece & piece).matches_any()
+        (type_piece & piece) != P::UNMATCHABLE
     }
 
     /// Changes the origin of a set of points.
@@ -245,10 +245,7 @@ mod tests {
 
     impl Piece for TestPiece {
         type MatchType = TestMatchType;
-
-        fn matches_any(&self) -> bool {
-            *self != TestPiece::None
-        }
+        const UNMATCHABLE: Self = Self::None;
     }
 
     #[test]

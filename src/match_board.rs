@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use crate::{BoardState, Match, MatchPattern, Piece, Pos};
 
 /// Keeps track of the current board state and computes matches.
@@ -21,8 +21,8 @@ pub struct MatchBoard<
     const HEIGHT: usize
 > {
     board: BoardState<P, WIDTH, HEIGHT>,
-    last_changed: VecDeque<Pos>,
-    patterns: Vec<&'a MatchPattern<M>>
+    patterns: Vec<&'a MatchPattern<M>>,
+    matches: VecDeque<Match<'a, M>>
 }
 
 impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<'_, M, P, W, H> {
@@ -38,18 +38,15 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///                and another matches a column of three pieces, the column of five pattern
     ///                should probably be first.
     pub fn new(board: BoardState<P, W, H>, patterns: Vec<&MatchPattern<M>>) -> MatchBoard<M, P, W, H> {
-        let mut last_changed = VecDeque::with_capacity(W * H);
-        for x in 0..W {
-            for y in 0..H {
-                last_changed.push_back(Pos::new(x, y));
-            }
-        }
-
-        MatchBoard {
+        let mut match_board = MatchBoard {
             board,
-            last_changed,
-            patterns
-        }
+            patterns,
+            matches: VecDeque::new()
+        };
+
+        match_board.add_initial_matches();
+
+        match_board
     }
 
     /// Ends the current game by returning the final board state.
@@ -78,8 +75,9 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// Panics if the provided position is outside the board.
     pub fn set_piece(&mut self, pos: Pos, piece: P) -> P {
-        self.last_changed.push_back(pos);
-        self.board.set_piece(pos, piece)
+        let old_piece = self.board.set_piece(pos, piece);
+        self.recompute_matches(pos);
+        old_piece
     }
 
     /// Swap two pieces on the board. The order of two positions provided does not matter.
@@ -98,10 +96,10 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
             return;
         }
 
-        self.last_changed.push_back(first);
-        self.last_changed.push_back(second);
+        self.board.swap(first, second);
 
-        self.board.swap(first, second)
+        self.recompute_matches(first);
+        self.recompute_matches(second);
     }
 
     /// Gets the next match on the board. Matches from pieces that were changed
@@ -115,24 +113,52 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// Regardless of whether a match is found, each piece is unmarked for a
     /// match check, unless it has been marked multiple times.
     pub fn next_match(&mut self) -> Option<Match<M>> {
-        let mut next_pos;
-        let mut next_match = None;
+        self.matches.pop_front()
+    }
 
-        while next_match.is_none() {
-            next_pos = self.last_changed.pop_front()?;
+    /// Scans the initial state of the board for matches, adding them to the list of matches.
+    fn add_initial_matches(&mut self) {
+        for x in 0..W {
+            for y in 0..H {
+                let possible_match = self.patterns.iter().find_map(|pattern| {
+                    self.check_pattern(
+                        pattern,
+                        Pos::new(x, y)
+                    )
+                });
 
-            next_match = self.patterns.iter().find_map(|pattern| {
-                let positions = self.check_pattern(
-                    pattern.match_type(),
-                    pattern.spaces(),
-                    next_pos
-                )?;
+                if let Some(initial_match) = possible_match {
+                    let is_new_match = initial_match.iter().all(|pos| pos.x() >= x && pos.y() >= y);
+                    if is_new_match {
+                        self.matches.push_back(initial_match);
+                    }
+                }
+            }
+        };
+    }
 
-                return Some(Match::new(pattern, next_pos, positions));
-            });
+    /// Recomputes the current set of matches when a position on the board is changed.
+    ///
+    /// # Arguments
+    ///
+    /// * `changed_pos` - the position on the board that changed
+    fn recompute_matches(&mut self, changed_pos: Pos) {
+
+        // TODO: replace with drain_filter() once it is stable
+        self.matches = self.matches.clone().into_iter()
+            .filter(|prev_match| !prev_match.contains(changed_pos))
+            .collect();
+
+        let possible_new_match = self.patterns.iter().find_map(|&pattern| {
+            self.check_pattern(
+                pattern,
+                changed_pos
+            )
+        });
+
+        if let Some(new_match) = possible_new_match {
+            self.matches.push_back(new_match);
         }
-
-        next_match
     }
 
     /// Checks for a pattern that includes a specific position on the board. Looks
@@ -142,10 +168,9 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// # Arguments
     ///
-    /// * `match_type` - the match type of the pattern
-    /// * `pattern` - the set of relative positions that represent a pattern
+    /// * `pattern` - the match pattern to check
     /// * `pos` - the position that must be included in a match
-    fn check_pattern(&self, match_type: M, pattern: &[Pos], pos: Pos) -> Option<Vec<Pos>> {
+    fn check_pattern<'a>(&self, pattern: &'a MatchPattern<M>, pos: Pos) -> Option<Match<'a, M>> {
         pattern.iter().find_map(|&original| {
 
             // Don't check variants outside the board
@@ -153,8 +178,8 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
                 return None;
             }
 
-            self.check_variant(match_type, pattern, pos - original)
-        })
+            self.check_variant(pattern, pos - original)
+        }).map(|positions| Match::new(pattern, pos, positions))
     }
 
     /// Checks for a single variant of a pattern and returns the corresponding positions
@@ -162,19 +187,29 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// # Arguments
     ///
-    /// * `match_type` - the match type of the pattern
-    /// * `pattern` - the set of relative positions that represent a variant
+    /// * `pattern` - the match pattern to check
     /// * `new_origin` - the origin to use for the pattern positions so that they
     ///                  correspond to actual positions on the board
-    fn check_variant(&self, match_type: M, pattern: &[Pos], new_origin: Pos) -> Option<Vec<Pos>> {
-        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern, new_origin);
+    fn check_variant(&self, pattern: &MatchPattern<M>, new_origin: Pos) -> Option<HashSet<Pos>> {
+        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin);
         let all_match = grid_pos.iter().all(
-            |&pos| MatchBoard::<M, P, W, H>::matches(match_type, self.board.piece(pos))
+            |&pos| self.board.is_within_board(pos)
+                && MatchBoard::<M, P, W, H>::matches(pattern.match_type(), self.board.piece(pos))
         );
         match all_match {
             true => Some(grid_pos),
             false => None
         }
+    }
+
+    /// Changes the origin of a set of points.
+    ///
+    /// # Arguments
+    ///
+    /// * `positions` - the positions to change the origin of
+    /// * `origin` - the new origin to use for the positions
+    fn change_origin<'a>(positions: impl Iterator<Item=&'a Pos>, origin: Pos) -> HashSet<Pos> {
+        positions.map(|&original| original + origin).collect()
     }
 
     /// Checks if the given piece has the given match type.
@@ -186,16 +221,6 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     fn matches(match_type: M, piece: P) -> bool {
         let type_piece: P = match_type.into();
         (type_piece & piece) != P::UNMATCHABLE
-    }
-
-    /// Changes the origin of a set of points.
-    ///
-    /// # Arguments
-    ///
-    /// * `positions` - the positions to change the origin of
-    /// * `origin` - the new origin to use for the positions
-    fn change_origin(positions: &[Pos], origin: Pos) -> Vec<Pos> {
-        positions.iter().map(|&original| original + origin).collect()
     }
 
 }
@@ -369,9 +394,9 @@ mod tests {
 
         let next_match = match_board.next_match().unwrap();
         assert_eq!(Pos::new(0, 1), next_match.changed_pos());
-        assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(4, 6)));
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
     }
 
     #[test]
@@ -390,14 +415,11 @@ mod tests {
         match_board.set_piece(Pos::new(1, 1), TestPiece::Both);
         match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
 
-        let expected_changed_pos = vec![Pos::new(0, 1), Pos::new(1, 1), Pos::new(4, 6)];
-        for i in 0..3 {
-            let next_match = match_board.next_match().unwrap();
-            assert_eq!(*expected_changed_pos.get(i).unwrap(), next_match.changed_pos());
-            assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-            assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-            assert!(next_match.board_pos().contains(&Pos::new(4, 6)));
-        }
+        let next_match = match_board.next_match().unwrap();
+        assert_eq!(Pos::new(4, 6), next_match.changed_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
     }
 
     #[test]
@@ -420,9 +442,9 @@ mod tests {
 
         let next_match = match_board.next_match().unwrap();
         assert_eq!(Pos::new(6, 6), next_match.changed_pos());
-        assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(6, 6)));
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(6, 6)));
     }
 
     #[test]
@@ -445,9 +467,9 @@ mod tests {
 
         let next_match = match_board.next_match().unwrap();
         assert_eq!(Pos::new(6, 6), next_match.changed_pos());
-        assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(6, 6)));
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(6, 6)));
     }
 
     #[test]
@@ -464,8 +486,6 @@ mod tests {
         let mut match_board = MatchBoard::new(board, vec![&pattern]);
 
         // Empty initial positions from last modified queue
-        match_board.next_match();
-        match_board.next_match();
         match_board.next_match();
 
         match_board.swap(Pos::new(6, 6), Pos::new(6, 6));
@@ -510,15 +530,15 @@ mod tests {
 
         let next_match = match_board.next_match().unwrap();
         assert_eq!(Pos::new(4, 6), next_match.changed_pos());
-        assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(4, 6)));
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
 
         assert!(match_board.next_match().is_none());
     }
 
     #[test]
-    fn next_match_matches_when_in_queue_twice() {
+    fn next_match_matches_when_changed_twice() {
         let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
@@ -534,17 +554,13 @@ mod tests {
         match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
         match_board.set_piece(Pos::new(0, 1), TestPiece::Both);
 
-        let expected_changed_pos = vec![
-            Pos::new(0, 1), Pos::new(1, 1),
-            Pos::new(4, 6), Pos::new(0, 1)
-        ];
-        for i in 0..4 {
-            let next_match = match_board.next_match().unwrap();
-            assert_eq!(*expected_changed_pos.get(i).unwrap(), next_match.changed_pos());
-            assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-            assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-            assert!(next_match.board_pos().contains(&Pos::new(4, 6)));
-        }
+        let next_match = match_board.next_match().unwrap();
+        assert_eq!(Pos::new(0, 1), next_match.changed_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
+
+        assert!(match_board.next_match().is_none());
     }
 
     #[test]
@@ -564,9 +580,7 @@ mod tests {
         match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
         match_board.set_piece(Pos::new(0, 1), TestPiece::First);
 
-        for _ in 0..4 {
-            assert!(match_board.next_match().is_none());
-        }
+        assert!(match_board.next_match().is_none());
     }
 
     #[test]
@@ -591,22 +605,19 @@ mod tests {
         match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
         match_board.set_piece(Pos::new(5, 6), TestPiece::Both);
 
-        let expected_changed_pos = vec![Pos::new(0, 1), Pos::new(1, 1), Pos::new(4, 6)];
-        for i in 0..3 {
-            let next_match = match_board.next_match().unwrap();
-            assert_eq!(*expected_changed_pos.get(i).unwrap(), next_match.changed_pos());
-            assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-            assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-            assert!(next_match.board_pos().contains(&Pos::new(4, 6)));
-            assert!(!next_match.board_pos().contains(&Pos::new(5, 6)));
-        }
-
         let next_match = match_board.next_match().unwrap();
-        assert_eq!(Pos::new(5, 6), next_match.changed_pos());
-        assert!(next_match.board_pos().contains(&Pos::new(0, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(1, 1)));
-        assert!(next_match.board_pos().contains(&Pos::new(4, 6)));
-        assert!(next_match.board_pos().contains(&Pos::new(5, 6)));
+        assert_eq!(Pos::new(4, 6), next_match.changed_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
+        assert!(!next_match.contains(Pos::new(5, 6)));
+
+        let next_next_match = match_board.next_match().unwrap();
+        assert_eq!(Pos::new(5, 6), next_next_match.changed_pos());
+        assert!(next_next_match.contains(Pos::new(0, 1)));
+        assert!(next_next_match.contains(Pos::new(1, 1)));
+        assert!(next_next_match.contains(Pos::new(4, 6)));
+        assert!(next_next_match.contains(Pos::new(5, 6)));
     }
 
     #[test]

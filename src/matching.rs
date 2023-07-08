@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::position::Pos;
 
 /// A pattern of piece positions that represents a valid match on a board.
@@ -5,7 +6,7 @@ use crate::position::Pos;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MatchPattern<M> {
     match_type: M,
-    spaces: Vec<Pos>
+    spaces: HashSet<Pos>
 }
 
 impl<M: Copy> MatchPattern<M> {
@@ -33,9 +34,9 @@ impl<M: Copy> MatchPattern<M> {
         self.match_type
     }
 
-    /// Gets the relative position list for this pattern.
-    pub fn spaces(&self) -> &[Pos] {
-        &self.spaces
+    /// Returns an iterator of all of the relative positions in this pattern.
+    pub fn iter(&self) -> impl Iterator<Item=&Pos> {
+        self.spaces.iter()
     }
 
 }
@@ -46,7 +47,7 @@ impl<M: Copy> MatchPattern<M> {
 pub struct Match<'a, M> {
     pattern: &'a MatchPattern<M>,
     changed_pos: Pos,
-    board_pos: Vec<Pos>
+    board_pos: HashSet<Pos>
 }
 
 impl<M> Match<'_, M> {
@@ -58,7 +59,7 @@ impl<M> Match<'_, M> {
     /// * `pattern` - the pattern of the found match
     /// * `changed_pos` - the position that was changed and triggered the match
     /// * `board_pos` - actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern<M>, changed_pos: Pos, board_pos: Vec<Pos>) -> Match<M> {
+    pub(crate) fn new(pattern: &MatchPattern<M>, changed_pos: Pos, board_pos: HashSet<Pos>) -> Match<M> {
         Match { pattern, changed_pos, board_pos }
     }
 
@@ -72,15 +73,25 @@ impl<M> Match<'_, M> {
         self.changed_pos
     }
 
-    /// Gets all of the board positions where this pattern is located.
-    pub fn board_pos(&self) -> &[Pos] {
-        &self.board_pos
+    /// Checks if the given position on the board is part of the match.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - position to check for in this match
+    pub fn contains(&self, pos: Pos) -> bool {
+        self.board_pos.contains(&pos)
+    }
+
+    /// Returns an iterator of all of the board positions where this pattern is located.
+    pub fn iter(&self) -> impl Iterator<Item=&Pos> {
+        self.board_pos.iter()
     }
 
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use crate::matching::{MatchPattern, Match};
     use crate::position::Pos;
 
@@ -88,7 +99,7 @@ mod tests {
     fn new_pattern_empty_set_works() {
         let spaces = Vec::new();
         let pattern = MatchPattern::new(0, &spaces[..]);
-        assert!(pattern.spaces().is_empty());
+        assert!(pattern.iter().next().is_none());
     }
 
     #[test]
@@ -100,12 +111,12 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut expected_spaces = Vec::new();
-        expected_spaces.push(Pos::new(0, 1));
-        expected_spaces.push(Pos::new(1, 0));
-        expected_spaces.push(Pos::new(5, 5));
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
 
-        assert_eq!(expected_spaces, *pattern.spaces());
+        assert_eq!(expected_spaces, pattern.iter().map(|&pos| pos).collect());
     }
 
     #[test]
@@ -117,12 +128,12 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut expected_spaces = Vec::new();
-        expected_spaces.push(Pos::new(0, 1));
-        expected_spaces.push(Pos::new(1, 0));
-        expected_spaces.push(Pos::new(5, 5));
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
 
-        assert_eq!(expected_spaces, *pattern.spaces());
+        assert_eq!(expected_spaces, pattern.iter().map(|&pos| pos).collect());
     }
 
     #[test]
@@ -134,12 +145,12 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut expected_spaces = Vec::new();
-        expected_spaces.push(Pos::new(0, 1));
-        expected_spaces.push(Pos::new(1, 0));
-        expected_spaces.push(Pos::new(5, 5));
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
 
-        assert_eq!(expected_spaces, *pattern.spaces());
+        assert_eq!(expected_spaces, pattern.iter().map(|&pos| pos).collect());
     }
 
     #[test]
@@ -151,12 +162,12 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut expected_spaces = Vec::new();
-        expected_spaces.push(Pos::new(0, 1));
-        expected_spaces.push(Pos::new(1, 0));
-        expected_spaces.push(Pos::new(5, 5));
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(0, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(5, 5));
 
-        assert_eq!(expected_spaces, *pattern.spaces());
+        assert_eq!(expected_spaces, pattern.iter().map(|&pos| pos).collect());
     }
 
     #[test]
@@ -168,12 +179,12 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut expected_spaces = Vec::new();
-        expected_spaces.push(Pos::new(1, 1));
-        expected_spaces.push(Pos::new(1, 0));
-        expected_spaces.push(Pos::new(0, 1));
+        let mut expected_spaces = HashSet::new();
+        expected_spaces.insert(Pos::new(1, 1));
+        expected_spaces.insert(Pos::new(1, 0));
+        expected_spaces.insert(Pos::new(0, 1));
 
-        assert_eq!(expected_spaces, *pattern.spaces());
+        assert_eq!(expected_spaces, pattern.iter().map(|&pos| pos).collect());
     }
 
     #[test]
@@ -196,10 +207,10 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut board_pos = Vec::new();
-        board_pos.push(Pos::new(5, 1));
-        board_pos.push(Pos::new(6, 0));
-        board_pos.push(Pos::new(10, 5));
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
 
         let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
         assert_eq!(pattern, *match1.pattern());
@@ -214,10 +225,10 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut board_pos = Vec::new();
-        board_pos.push(Pos::new(5, 1));
-        board_pos.push(Pos::new(6, 0));
-        board_pos.push(Pos::new(10, 5));
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
 
         let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
         assert_eq!(Pos::new(6, 0), match1.changed_pos());
@@ -232,17 +243,17 @@ mod tests {
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
-        let mut board_pos = Vec::new();
-        board_pos.push(Pos::new(5, 1));
-        board_pos.push(Pos::new(6, 0));
-        board_pos.push(Pos::new(10, 5));
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
 
-        let mut expected_board_pos = Vec::new();
-        expected_board_pos.push(Pos::new(5, 1));
-        expected_board_pos.push(Pos::new(6, 0));
-        expected_board_pos.push(Pos::new(10, 5));
+        let mut expected_board_pos = HashSet::new();
+        expected_board_pos.insert(Pos::new(5, 1));
+        expected_board_pos.insert(Pos::new(6, 0));
+        expected_board_pos.insert(Pos::new(10, 5));
 
         let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
-        assert_eq!(expected_board_pos, *match1.board_pos());
+        assert_eq!(expected_board_pos, match1.iter().map(|&pos| pos).collect());
     }
 }

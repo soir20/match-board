@@ -100,7 +100,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Arguments
     ///
     /// * `pos` - the position to check
-    fn is_within_board(&self, pos: Pos) -> bool {
+    pub(crate) fn is_within_board(&self, pos: Pos) -> bool {
         pos.x() < W && pos.y() < H
     }
 

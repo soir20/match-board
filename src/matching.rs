@@ -89,9 +89,60 @@ impl<M> Match<'_, M> {
 
 }
 
+// A group of pieces where one needs to change to make a match.
+#[derive(Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct CloseMatch<'a, M> {
+    pattern: &'a MatchPattern<M>,
+    missing_pos: Pos,
+    board_pos: HashSet<Pos>
+}
+
+impl<M> CloseMatch<'_, M> {
+
+    /// Creates a new close match, a group of pieces where one piece needs to change
+    /// to make a match.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - the pattern of the found match
+    /// * `missing_pos` - the position that needs to be changed to make a match
+    /// * `board_pos` - actual positions on the board
+    pub(crate) fn new(pattern: &MatchPattern<M>, missing_pos: Pos, board_pos: HashSet<Pos>) -> CloseMatch<M> {
+        CloseMatch { pattern, missing_pos, board_pos }
+    }
+
+    /// Gets the pattern associated with this close match.
+    pub fn pattern(&self) -> &MatchPattern<M> {
+        self.pattern
+    }
+
+    /// Gets the position that needs to be changed to make a match.
+    pub fn missing_pos(&self) -> Pos {
+        self.missing_pos
+    }
+
+    /// Checks if the given position on the board is part of the close match.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - position to check for in this close match
+    pub fn contains(&self, pos: Pos) -> bool {
+        self.board_pos.contains(&pos)
+    }
+
+    /// Returns an iterator of all of the board positions where this pattern is located.
+    /// Does not include the position that is missing.
+    pub fn iter(&self) -> impl Iterator<Item=&Pos> {
+        self.board_pos.iter()
+    }
+
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
+    use crate::CloseMatch;
     use crate::matching::{MatchPattern, Match};
     use crate::position::Pos;
 
@@ -254,6 +305,65 @@ mod tests {
         expected_board_pos.insert(Pos::new(10, 5));
 
         let match1 = Match::new(&pattern, Pos::new(6, 0), board_pos);
+        assert_eq!(expected_board_pos, match1.iter().map(|&pos| pos).collect());
+    }
+
+    #[test]
+    fn new_close_match_created_with_pattern_has_pattern() {
+        let mut spaces = Vec::new();
+        spaces.push(Pos::new(0, 1));
+        spaces.push(Pos::new(1, 0));
+        spaces.push(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new(0, &spaces[..]);
+
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
+
+        let match1 = CloseMatch::new(&pattern, Pos::new(6, 0), board_pos);
+        assert_eq!(pattern, *match1.pattern());
+    }
+
+    #[test]
+    fn new_close_match_created_with_missing_pos_has_missing_pos() {
+        let mut spaces = Vec::new();
+        spaces.push(Pos::new(0, 1));
+        spaces.push(Pos::new(1, 0));
+        spaces.push(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new(0, &spaces[..]);
+
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
+
+        let match1 = CloseMatch::new(&pattern, Pos::new(6, 0), board_pos);
+        assert_eq!(Pos::new(6, 0), match1.missing_pos());
+    }
+
+    #[test]
+    fn new_close_match_created_with_board_pos_has_board_pos() {
+        let mut spaces = Vec::new();
+        spaces.push(Pos::new(0, 1));
+        spaces.push(Pos::new(1, 0));
+        spaces.push(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new(0, &spaces[..]);
+
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
+
+        let mut expected_board_pos = HashSet::new();
+        expected_board_pos.insert(Pos::new(5, 1));
+        expected_board_pos.insert(Pos::new(6, 0));
+        expected_board_pos.insert(Pos::new(10, 5));
+
+        let match1 = CloseMatch::new(&pattern, Pos::new(6, 0), board_pos);
         assert_eq!(expected_board_pos, match1.iter().map(|&pos| pos).collect());
     }
 }

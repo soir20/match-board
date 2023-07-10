@@ -1,5 +1,5 @@
 use std::collections::{HashSet, VecDeque};
-use crate::{BoardState, Match, MatchPattern, Piece, Pos};
+use crate::{BoardState, CloseMatch, Match, MatchPattern, Piece, Pos};
 
 /// Keeps track of the current board state and computes matches.
 ///
@@ -22,7 +22,8 @@ pub struct MatchBoard<
 > {
     board: BoardState<P, WIDTH, HEIGHT>,
     patterns: Vec<&'a MatchPattern<M>>,
-    matches: VecDeque<Match<'a, M>>
+    matches: VecDeque<Match<'a, M>>,
+    close_matches: VecDeque<CloseMatch<'a, M>>
 }
 
 impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<'_, M, P, W, H> {
@@ -41,7 +42,8 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
         let mut match_board = MatchBoard {
             board,
             patterns,
-            matches: VecDeque::new()
+            matches: VecDeque::new(),
+            close_matches: VecDeque::new()
         };
 
         match_board.add_initial_matches();
@@ -104,19 +106,33 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
 
     /// Gets the next match on the board. Matches from pieces that were changed
     /// earlier are returned first. Matches are always based on the current board
-    /// state, not the board state when the match occurred.
+    /// state.
     ///
     /// All positions are checked for a match the first time this method is run.
     ///
     /// Pieces that were changed but did not create a match are skipped.
-    ///
-    /// Regardless of whether a match is found, each piece is unmarked for a
-    /// match check, unless it has been marked multiple times.
     pub fn next_match(&mut self) -> Option<Match<M>> {
         self.matches.pop_front()
     }
 
-    /// Scans the initial state of the board for matches, adding them to the list of matches.
+    /// Gets the next close match on the board. A close match occurs when one piece needs to
+    /// change to create a match. However, the missing piece does not have to be adjacent to
+    /// the missing position or even on the board. Close matches from pieces that were changed
+    /// earlier are returned first. Close matches are always based on the current board
+    /// state.
+    ///
+    /// Close matches are still computed even when their positions are part of a match. However,
+    /// a close match will not be returned when a complete match exists for the exact same
+    /// positions.
+    ///
+    /// All positions are checked for a close match the first time this method is run.
+    ///
+    /// Pieces that were changed but did not create a close match are skipped.
+    pub fn next_close_match(&mut self) -> Option<CloseMatch<M>> {
+        self.close_matches.pop_front()
+    }
+
+    /// Scans the initial state of the board for matches and close matches.
     fn add_initial_matches(&mut self) {
         for x in 0..W {
             for y in 0..H {
@@ -131,6 +147,20 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
                     let is_new_match = initial_match.iter().all(|pos| pos.x() >= x && pos.y() >= y);
                     if is_new_match {
                         self.matches.push_back(initial_match);
+                    }
+                }
+
+                let possible_close_match = self.patterns.iter().find_map(|pattern| {
+                    self.check_close_pattern(
+                        pattern,
+                        Pos::new(x, y)
+                    )
+                });
+
+                if let Some(initial_close_match) = possible_close_match {
+                    let is_new_match = initial_close_match.iter().all(|pos| pos.x() >= x && pos.y() >= y);
+                    if is_new_match {
+                        self.close_matches.push_back(initial_close_match);
                     }
                 }
             }
@@ -149,15 +179,32 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
             .filter(|prev_match| !prev_match.contains(changed_pos))
             .collect();
 
-        let possible_new_match = self.patterns.iter().find_map(|&pattern| {
-            self.check_pattern(
+        let possible_new_match = self.patterns.iter().find_map(
+            |&pattern| self.check_pattern(
                 pattern,
                 changed_pos
             )
-        });
+        );
 
         if let Some(new_match) = possible_new_match {
             self.matches.push_back(new_match);
+        }
+
+        // Both a match and a close match can be added, in case we want to process
+        // the close match and not the match for some reason.
+        self.close_matches = self.close_matches.clone().into_iter()
+            .filter(|prev_match| !prev_match.contains(changed_pos))
+            .collect();
+
+        let possible_close_match = self.patterns.iter().find_map(
+            |&pattern| self.check_close_pattern(
+                pattern,
+                changed_pos
+            )
+        );
+
+        if let Some(new_close_match) = possible_close_match {
+            self.close_matches.push_back(new_close_match);
         }
     }
 
@@ -199,6 +246,52 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
         match all_match {
             true => Some(grid_pos),
             false => None
+        }
+    }
+
+    /// Checks for a close match on a pattern that includes a specific position on the board.
+    /// Looks for all variants of a pattern (all possible patterns that include the required
+    /// position). Returns the positions on the board that correspond to that pattern
+    /// if there is a match.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - the match pattern to check
+    /// * `pos` - the position that must be included in a match
+    fn check_close_pattern<'a>(&self, pattern: &'a MatchPattern<M>, pos: Pos) -> Option<CloseMatch<'a, M>> {
+        pattern.iter().find_map(|&original| {
+
+            // Don't check variants outside the board
+            if original.x() > pos.x() || original.y() > pos.y() {
+                return None;
+            }
+
+            self.check_close_variant(pattern, pos - original)
+        }).map(|(positions, missing_pos)| CloseMatch::new(pattern, missing_pos, positions))
+    }
+
+    /// Checks for a close match of a single variant of a pattern and returns the
+    /// corresponding positions on the board if found.
+    ///
+    /// # Arguments
+    ///
+    /// * `pattern` - the match pattern to check
+    /// * `new_origin` - the origin to use for the pattern positions so that they
+    ///                  correspond to actual positions on the board
+    fn check_close_variant(&self, pattern: &MatchPattern<M>, new_origin: Pos) -> Option<(HashSet<Pos>, Pos)> {
+        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin);
+
+        if grid_pos.iter().any(|&pos| !self.board.is_within_board(pos)) {
+            return None;
+        }
+
+        let (matched, unmatched): (HashSet<Pos>, HashSet<Pos>) = grid_pos.iter().partition(
+            |&&pos| MatchBoard::<M, P, W, H>::matches(pattern.match_type(), self.board.piece(pos))
+        );
+
+        match unmatched.len() {
+            1 => Some((matched, unmatched.into_iter().next().unwrap())),
+            _ => None
         }
     }
 
@@ -394,29 +487,6 @@ mod tests {
 
         let next_match = match_board.next_match().unwrap();
         assert_eq!(Pos::new(0, 1), next_match.changed_pos());
-        assert!(next_match.contains(Pos::new(0, 1)));
-        assert!(next_match.contains(Pos::new(1, 1)));
-        assert!(next_match.contains(Pos::new(4, 6)));
-    }
-
-    #[test]
-    fn next_match_set_pieces_matches_for_all_pieces() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let mut match_board = MatchBoard::new(board, vec![&pattern]);
-
-        // Empty initial positions from last modified queue
-        match_board.next_match();
-
-        match_board.set_piece(Pos::new(0, 1), TestPiece::Second);
-        match_board.set_piece(Pos::new(1, 1), TestPiece::Both);
-        match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
-
-        let next_match = match_board.next_match().unwrap();
-        assert_eq!(Pos::new(4, 6), next_match.changed_pos());
         assert!(next_match.contains(Pos::new(0, 1)));
         assert!(next_match.contains(Pos::new(1, 1)));
         assert!(next_match.contains(Pos::new(4, 6)));
@@ -621,7 +691,233 @@ mod tests {
     }
 
     #[test]
-    fn next_match_end_game_returns_board() {
+    fn next_close_match_no_patterns_none() {
+        let mut board: MatchBoard<TestMatchType, TestPiece, 15, 16> = MatchBoard::new(
+            BoardState::new(),
+            Vec::new()
+        );
+
+        board.set_piece(Pos::new(1, 2), TestPiece::First);
+        board.set_piece(Pos::new(2, 3), TestPiece::First);
+        assert!(board.next_close_match().is_none());
+    }
+
+    #[test]
+    fn next_close_match_checks_initial_board() {
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
+
+        board.set_piece(Pos::new(0, 1), TestPiece::First);
+        board.set_piece(Pos::new(4, 6), TestPiece::First);
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
+        let pattern = MatchPattern::new(TestMatchType::First, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(
+            board,
+            vec![&pattern]
+        );
+
+        let next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(1, 1), next_match.missing_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(!next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
+    }
+
+    #[test]
+    fn next_close_match_swap_pieces_match_found_at_first() {
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
+
+        board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        board.set_piece(Pos::new(1, 1), TestPiece::Both);
+        board.set_piece(Pos::new(6, 6), TestPiece::Second);
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(8, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.swap(Pos::new(6, 6), Pos::new(8, 8));
+
+        let next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(6, 6), next_match.missing_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(!next_match.contains(Pos::new(6, 6)));
+    }
+
+    #[test]
+    fn next_close_match_swap_pieces_match_found_at_second() {
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
+
+        board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        board.set_piece(Pos::new(1, 1), TestPiece::Both);
+        board.set_piece(Pos::new(6, 6), TestPiece::Second);
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(8, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.swap(Pos::new(8, 8), Pos::new(6, 6));
+
+        let next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(6, 6), next_match.missing_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(!next_match.contains(Pos::new(6, 6)));
+    }
+
+    #[test]
+    fn next_close_match_swap_self_no_match() {
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
+
+        board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        board.set_piece(Pos::new(6, 6), TestPiece::Second);
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(8, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.swap(Pos::new(6, 6), Pos::new(6, 6));
+
+        assert!(match_board.next_close_match().is_none())
+    }
+
+    #[test]
+    fn next_close_match_wrong_match_type_none_found() {
+        let board = BoardState::<TestPiece, 15, 16>::new();
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        match_board.set_piece(Pos::new(4, 6), TestPiece::First);
+
+        assert!(match_board.next_close_match().is_none())
+    }
+
+    #[test]
+    fn next_close_match_matches_when_not_all_in_queue() {
+        let mut board = BoardState::<TestPiece, 15, 16>::new();
+        board.set_piece(Pos::new(0, 1), TestPiece::Second);
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
+
+        let next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(1, 1), next_match.missing_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(!next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
+
+        assert!(match_board.next_close_match().is_none());
+    }
+
+    #[test]
+    fn next_close_match_matches_when_changed_twice() {
+        let board = BoardState::<TestPiece, 15, 16>::new();
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        match_board.set_piece(Pos::new(4, 6), TestPiece::Second);
+        match_board.set_piece(Pos::new(0, 1), TestPiece::Both);
+
+        let next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(1, 1), next_match.missing_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(!next_match.contains(Pos::new(1, 1)));
+        assert!(next_match.contains(Pos::new(4, 6)));
+
+        assert!(match_board.next_close_match().is_none());
+    }
+
+    #[test]
+    fn next_close_match_never_matches_when_match_overwritten() {
+        let board = BoardState::<TestPiece, 15, 16>::new();
+
+        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
+        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        match_board.set_piece(Pos::new(1, 1), TestPiece::Both);
+        match_board.set_piece(Pos::new(0, 1), TestPiece::First);
+
+        assert!(match_board.next_close_match().is_none());
+    }
+
+    #[test]
+    fn next_close_match_set_pieces_matches_earlier_pattern() {
+        let board = BoardState::<TestPiece, 15, 16>::new();
+
+        let pattern_pos1 = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
+        let pattern_pos2 = vec![
+            Pos::new(2, 3), Pos::new(3, 3),
+            Pos::new(6, 8), Pos::new(7, 8)
+        ];
+        let pattern1 = MatchPattern::new(TestMatchType::Second, &pattern_pos1[..]);
+        let pattern2 = MatchPattern::new(TestMatchType::Second, &pattern_pos2[..]);
+
+        let mut match_board = MatchBoard::new(board, vec![&pattern1, &pattern2]);
+
+        // Empty initial positions from last modified queue
+        match_board.next_close_match();
+
+        match_board.set_piece(Pos::new(0, 1), TestPiece::Second);
+        match_board.set_piece(Pos::new(1, 1), TestPiece::Both);
+        match_board.set_piece(Pos::new(5, 6), TestPiece::Both);
+
+        let next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(4, 6), next_match.missing_pos());
+        assert!(next_match.contains(Pos::new(0, 1)));
+        assert!(next_match.contains(Pos::new(1, 1)));
+        assert!(!next_match.contains(Pos::new(4, 6)));
+        assert!(!next_match.contains(Pos::new(5, 6)));
+
+        let next_next_match = match_board.next_close_match().unwrap();
+        assert_eq!(Pos::new(2, 1), next_next_match.missing_pos());
+        assert!(!next_next_match.contains(Pos::new(0, 1)));
+        assert!(next_next_match.contains(Pos::new(1, 1)));
+        assert!(!next_next_match.contains(Pos::new(4, 6)));
+        assert!(next_next_match.contains(Pos::new(5, 6)));
+    }
+
+    #[test]
+    fn end_game_returns_board() {
         let board = BoardState::<TestPiece, 15, 16>::new();
 
         let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];

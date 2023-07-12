@@ -323,7 +323,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// * `piece` - piece to compare to the match type
     fn matches(match_type: M, piece: P) -> bool {
         let type_piece: P = match_type.into();
-        (type_piece & piece) != P::UNMATCHABLE
+        (type_piece & piece) != P::AIR
     }
 
 }
@@ -373,7 +373,7 @@ mod tests {
 
     impl Piece for TestPiece {
         type MatchType = TestMatchType;
-        const UNMATCHABLE: Self = Self::None;
+        const AIR: Self = Self::None;
     }
 
     #[test]

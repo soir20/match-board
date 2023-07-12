@@ -9,8 +9,8 @@ pub trait Piece: Copy + From<Self::MatchType> + Default + BitAnd<Output=Self> + 
     /// A type that all pieces in a pattern must have to create a match.
     type MatchType;
 
-    /// A piece that matches no match types.
-    const UNMATCHABLE: Self;
+    /// A piece that matches no match types and is treated as empty.
+    const AIR: Self;
 
 }
 
@@ -150,7 +150,7 @@ mod tests {
 
     impl Piece for TestPiece {
         type MatchType = u8;
-        const UNMATCHABLE: Self = Self::None;
+        const AIR: Self = Self::None;
     }
 
     #[test]

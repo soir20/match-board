@@ -132,6 +132,16 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
         self.close_matches.pop_front()
     }
 
+    /// Checks if a given position is inside the board.
+    ///
+    /// # Arguments
+    ///
+    /// * `pos` - the position to check
+    pub fn is_in_bounds(&self, pos: Pos) -> bool {
+        pos.x() < W && pos.y() < H
+    }
+
+
     /// Scans the initial state of the board for matches and close matches.
     fn add_initial_matches(&mut self) {
         for x in 0..W {
@@ -240,7 +250,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     fn check_variant(&self, pattern: &MatchPattern<M>, new_origin: Pos) -> Option<HashSet<Pos>> {
         let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin);
         let all_match = grid_pos.iter().all(
-            |&pos| self.board.is_within_board(pos)
+            |&pos| self.is_in_bounds(pos)
                 && MatchBoard::<M, P, W, H>::matches(pattern.match_type(), self.board.piece(pos))
         );
         match all_match {
@@ -281,7 +291,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     fn check_close_variant(&self, pattern: &MatchPattern<M>, new_origin: Pos) -> Option<(HashSet<Pos>, Pos)> {
         let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin);
 
-        if grid_pos.iter().any(|&pos| !self.board.is_within_board(pos)) {
+        if grid_pos.iter().any(|&pos| !self.is_in_bounds(pos)) {
             return None;
         }
 

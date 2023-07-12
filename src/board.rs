@@ -53,7 +53,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// Panics if the provided position is outside the board.
     pub fn piece(&self, pos: Pos) -> P {
-        if !self.is_within_board(pos) {
+        if !self.is_in_bounds(pos) {
             panic!("Tried to access piece outside board: {}", pos);
         }
 
@@ -71,7 +71,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// Panics if the provided position is outside the board.
     pub fn set_piece(&mut self, pos: Pos, piece: P) -> P {
-        if !self.is_within_board(pos) {
+        if !self.is_in_bounds(pos) {
             panic!("Tried to set piece out of bounds: {}", pos);
         }
 
@@ -100,7 +100,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Arguments
     ///
     /// * `pos` - the position to check
-    pub(crate) fn is_within_board(&self, pos: Pos) -> bool {
+    pub fn is_in_bounds(&self, pos: Pos) -> bool {
         pos.x() < W && pos.y() < H
     }
 

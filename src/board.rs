@@ -176,7 +176,6 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// * `first` - first position to compare
     /// * `second` - second position to compare
     fn horizontally_adjacent(first: Pos, second: Pos) -> bool {
-        println!("{} {}", usize::abs_diff(first.x(), second.x()) == 1, usize::abs_diff(first.y(), second.y()) == 0);
         usize::abs_diff(first.x(), second.x()) == 1
             && usize::abs_diff(first.y(), second.y()) == 0
     }
@@ -188,7 +187,6 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// * `first` - first position to compare
     /// * `second` - second position to compare
     fn vertically_adjacent(first: Pos, second: Pos) -> bool {
-        println!("{} {}", usize::abs_diff(first.x(), second.x()) == 0, usize::abs_diff(first.y(), second.y()) == 1);
         usize::abs_diff(first.x(), second.x()) == 0
             && usize::abs_diff(first.y(), second.y()) == 1
     }

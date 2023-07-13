@@ -31,7 +31,11 @@ pub struct BoardState<
     const WIDTH: usize,
     const HEIGHT: usize
 > {
-    pieces: [[P; HEIGHT]; WIDTH]
+    pieces: [[P; HEIGHT]; WIDTH],
+
+    // TODO: The inner array is one element too large, but generic const exprs aren't stable yet
+    horizontal_barriers: [[bool; HEIGHT]; WIDTH],
+    vertical_barriers: [[bool; WIDTH]; HEIGHT]
 }
 
 impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
@@ -39,7 +43,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// Creates a new board filled with default pieces (according to the [Default] trait).
     pub fn new() -> BoardState<P, W, H> {
         BoardState {
-            pieces: [[P::default(); H]; W]
+            pieces: [[P::default(); H]; W],
+            horizontal_barriers: [[false; H]; W],
+            vertical_barriers: [[false; W]; H]
         }
     }
 
@@ -102,6 +108,111 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// * `pos` - the position to check
     pub fn is_in_bounds(&self, pos: Pos) -> bool {
         pos.x() < W && pos.y() < H
+    }
+
+    /// Checks whether there is a barrier between two positions.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - first position to check whether there is a barrier between
+    /// * `second` - second position to check whether there is a barrier between
+    ///
+    /// # Panics
+    ///
+    /// Panics if the two positions are not vertically or horizontally adjacent.
+    pub fn has_barrier_between(&self, first: Pos, second: Pos) -> bool {
+        if !self.is_in_bounds(first) || !self.is_in_bounds(second) {
+            panic!("Tried to check barrier with piece out of bounds: {} and {}", first, second);
+        }
+
+        if BoardState::<P, W, H>::vertically_adjacent(first, second) {
+            let x = first.x();
+            let barrier_index = BoardState::<P, W, H>::horizontal_barrier_index(first, second);
+            return self.horizontal_barriers[x][barrier_index]
+        } else if BoardState::<P, W, H>::horizontally_adjacent(first, second) {
+            let y = first.y();
+            let barrier_index = BoardState::<P, W, H>::vertical_barrier_index(first, second);
+            return self.vertical_barriers[y][barrier_index]
+        }
+
+        panic!("Barriers only exist between adjacent positions, but {} and {} were provided",
+               first, second)
+    }
+
+    /// Sets whether there is a barrier between two positions.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - first position to set a barrier between
+    /// * `second` - second position to set a barrier between
+    /// * `has_barrier` - whether there should be a barrier between the two positions
+    ///
+    /// # Panics
+    ///
+    /// Panics if the two positions are not vertically or horizontally adjacent.
+    pub fn set_barrier_between(&mut self, first: Pos, second: Pos, has_barrier: bool) {
+        if !self.is_in_bounds(first) || !self.is_in_bounds(second) {
+            panic!("Tried to set barrier with piece out of bounds: {} and {}", first, second);
+        }
+
+        if BoardState::<P, W, H>::vertically_adjacent(first, second) {
+            let x = first.x();
+            let barrier_index = BoardState::<P, W, H>::horizontal_barrier_index(first, second);
+            self.horizontal_barriers[x][barrier_index] = has_barrier
+        } else if BoardState::<P, W, H>::horizontally_adjacent(first, second) {
+            let y = first.y();
+            let barrier_index = BoardState::<P, W, H>::vertical_barrier_index(first, second);
+            self.vertical_barriers[y][barrier_index] = has_barrier
+        } else {
+            panic!("Barriers only exist between adjacent positions, but {} and {} were provided",
+                   first, second)
+        }
+    }
+
+    /// Checks if two positions are horizontally adjacent.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - first position to compare
+    /// * `second` - second position to compare
+    fn horizontally_adjacent(first: Pos, second: Pos) -> bool {
+        println!("{} {}", usize::abs_diff(first.x(), second.x()) == 1, usize::abs_diff(first.y(), second.y()) == 0);
+        usize::abs_diff(first.x(), second.x()) == 1
+            && usize::abs_diff(first.y(), second.y()) == 0
+    }
+
+    /// Checks if two positions are vertically adjacent.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - first position to compare
+    /// * `second` - second position to compare
+    fn vertically_adjacent(first: Pos, second: Pos) -> bool {
+        println!("{} {}", usize::abs_diff(first.x(), second.x()) == 0, usize::abs_diff(first.y(), second.y()) == 1);
+        usize::abs_diff(first.x(), second.x()) == 0
+            && usize::abs_diff(first.y(), second.y()) == 1
+    }
+
+    /// Retrieves the index of a horizontal barrier within an array of horizontal barriers for
+    /// the same column.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - first position that the barrier exists between
+    /// * `second` - second position that the barrier exists between
+    fn horizontal_barrier_index(first: Pos, second: Pos) -> usize {
+        first.y().min(second.y())
+    }
+
+    /// Retrieves the index of a vertical barrier within an array of vertical barriers for
+    /// the same row.
+    ///
+    /// # Arguments
+    ///
+    /// * `first` - first position that the barrier exists between
+    /// * `second` - second position that the barrier exists between
+    fn vertical_barrier_index(first: Pos, second: Pos) -> usize {
+        first.x().min(second.x())
     }
 
 }
@@ -317,5 +428,164 @@ mod tests {
         let piece1 = TestPiece::First;
 
         board.set_piece(Pos::new(usize::MAX, usize::MAX), piece1);
+    }
+
+    #[test]
+    fn has_barrier_barriers_unset_defaults_false() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        for x in 0..14 {
+            for y in 0..15 {
+                assert!(!board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
+                assert!(!board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
+            }
+        }
+    }
+
+    #[test]
+    fn has_barrier_barrier_set_true() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        for x in 0..14 {
+            for y in 0..15 {
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
+                assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false);
+
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
+                assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false);
+            }
+        }
+    }
+
+    #[test]
+    fn has_barrier_barrier_set_twice_true() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        for x in 0..14 {
+            for y in 0..15 {
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
+                assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false);
+
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
+                assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false);
+            }
+        }
+    }
+
+    #[test]
+    fn has_barrier_barrier_overwritten_false() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        for x in 0..14 {
+            for y in 0..15 {
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false);
+                assert!(!board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
+
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false);
+                assert!(!board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_first_pos_out_of_bounds_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(14, 16), Pos::new(14, 15), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_second_pos_out_of_bounds_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(14, 15), Pos::new(14, 16), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_first_pos_very_large_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(usize::MAX, usize::MAX), Pos::new(14, 15), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_second_pos_very_large_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(14, 15), Pos::new(usize::MAX, usize::MAX), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_horizontally_separated_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(1, 2), Pos::new(3, 2), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_vertically_separated_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 4), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn set_barrier_diagonally_adjacent_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_barrier_between(Pos::new(1, 2), Pos::new(2, 3), true);
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_first_pos_out_of_bounds_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(14, 16), Pos::new(14, 15));
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_second_pos_out_of_bounds_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(14, 15), Pos::new(14, 16));
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_first_pos_very_large_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(usize::MAX, usize::MAX), Pos::new(14, 15));
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_second_pos_very_large_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(14, 15), Pos::new(usize::MAX, usize::MAX));
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_horizontally_separated_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(1, 2), Pos::new(3, 2));
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_vertically_separated_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(1, 2), Pos::new(1, 4));
+    }
+
+    #[test]
+    #[should_panic]
+    fn has_barrier_diagonally_adjacent_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.has_barrier_between(Pos::new(1, 2), Pos::new(2, 3));
     }
 }

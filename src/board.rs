@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use crate::position::Pos;
 
 use std::ops::BitAnd;
@@ -142,6 +143,46 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
             true => None,
             false => Some(0)
         }
+    }
+
+    /// Moves all pieces in the given column as if they were falling due to gravity. The bottom of
+    /// the board, horizontal barriers, and other pieces will block the fall of pieces in the given
+    /// column. This method returns (before, after) pairs of y-coordinates that describe how the
+    /// pieces were moved.
+    ///
+    /// # Arguments
+    ///
+    /// `x` - x-coordinate of the column to apply gravity to
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given column does not exist.
+    pub fn apply_gravity_to_column(&mut self, x: usize) -> Vec<(usize, usize)> {
+        if x >= W {
+            panic!("Column index {} is not within the board", x);
+        }
+
+        let mut air_ys = VecDeque::new();
+        let mut moves = Vec::new();
+
+        for y in 0..H {
+            let pos = Pos::new(x, y);
+
+            if self.pieces[x][y] == P::AIR {
+                air_ys.push_back(y);
+            } else if let Some(air_y) = air_ys.pop_front() {
+                self.swap(pos, Pos::new(x, air_y));
+                moves.push((y, air_y));
+                air_ys.push_back(y);
+            }
+
+            let pos_above = Pos::new(x, y + 1);
+            if self.is_in_bounds(pos_above) && self.has_barrier_between(pos, pos_above) {
+                air_ys.clear();
+            }
+        }
+
+        moves
     }
 
     /// Checks if a given position is inside the board.
@@ -675,7 +716,7 @@ mod tests {
         board.set_piece(Pos::new(x, 2), TestPiece::Second);
         board.set_piece(Pos::new(x, 5), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 3), true);
+        board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true);
 
         assert_eq!(6, board.surface(x).unwrap());
     }
@@ -689,8 +730,8 @@ mod tests {
         board.set_piece(Pos::new(x, 2), TestPiece::Second);
         board.set_piece(Pos::new(x, 5), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 3), true);
-        board.set_barrier_between(Pos::new(1, 6), Pos::new(1, 7), true);
+        board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true);
+        board.set_barrier_between(Pos::new(x, 6), Pos::new(x, 7), true);
 
         assert_eq!(7, board.surface(x).unwrap());
     }
@@ -700,5 +741,73 @@ mod tests {
     fn surface_column_index_out_of_bounds_panics() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.surface(15);
+    }
+
+    #[test]
+    fn column_gravity_zero_height_no_exception() {
+        let mut board: BoardState<TestPiece, 15, 0> = BoardState::new();
+        assert!(board.apply_gravity_to_column(1).is_empty());
+    }
+
+    #[test]
+    fn column_gravity_all_air_unchanged() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        assert!(board.apply_gravity_to_column(1).is_empty());
+        for y in 0..16 {
+            assert_eq!(TestPiece::None, board.piece(Pos::new(1, y)));
+        }
+    }
+
+    #[test]
+    fn column_gravity_all_filled_unchanged() {
+        let mut board: BoardState<TestPiece, 15, 8> = BoardState::new();
+        let x = 1;
+
+        for y in 0..8 {
+            board.set_piece(Pos::new(x, y), TestPiece::First);
+        }
+
+        assert!(board.apply_gravity_to_column(1).is_empty());
+        for y in 0..8 {
+            assert_eq!(TestPiece::First, board.piece(Pos::new(1, y)));
+        }
+    }
+
+    #[test]
+    fn column_gravity_air_pockets_pieces_fall() {
+        let mut board: BoardState<TestPiece, 15, 8> = BoardState::new();
+        let x = 1;
+
+        board.set_piece(Pos::new(x, 0), TestPiece::First);
+        board.set_piece(Pos::new(x, 2), TestPiece::Second);
+        board.set_piece(Pos::new(x, 5), TestPiece::First);
+        board.set_piece(Pos::new(x, 7), TestPiece::First);
+
+        board.set_barrier_between(Pos::new(x, 3), Pos::new(x, 4), true);
+
+        assert_eq!(vec![(2, 1), (5, 4), (7, 5)], board.apply_gravity_to_column(1));
+
+        assert_eq!(TestPiece::First, board.piece(Pos::new(x, 0)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(x, 1)));
+        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 2)));
+        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 3)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(x, 4)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(x, 5)));
+        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 6)));
+        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 7)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn column_gravity_column_index_out_of_bounds_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.apply_gravity_to_column(15);
+    }
+
+    #[test]
+    #[should_panic]
+    fn column_gravity_column_index_very_large_panics() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.apply_gravity_to_column(usize::MAX);
     }
 }

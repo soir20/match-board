@@ -744,6 +744,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn surface_column_index_very_large_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.surface(usize::MAX);
+    }
+
+    #[test]
     fn column_gravity_zero_height_no_exception() {
         let mut board: BoardState<TestPiece, 15, 0> = BoardState::new();
         assert!(board.apply_gravity_to_column(1).is_empty());

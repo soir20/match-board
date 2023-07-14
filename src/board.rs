@@ -101,6 +101,49 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         self.set_piece(second, old_first);
     }
 
+    /// Finds the y position of a space with air that represents the "surface" of the given column.
+    /// The surface is the position where a piece would be if it was dropped into the column from
+    /// the top of the board.
+    ///
+    /// If the entire column is filled with air and has no barriers, and the board has height
+    /// greater than zero, the surface is the bottommost position in the column (y = 0). Otherwise,
+    /// the surface is immediately above the topmost piece or barrier, whichever is higher. If
+    /// there is no space above the topmost piece, there is no surface.
+    ///
+    /// # Arguments
+    ///
+    /// `x` - x-coordinate of the column to find the surface of
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given column does not exist.
+    pub fn surface(&self, x: usize) -> Option<usize> {
+        if x >= W {
+            panic!("Column index {} is not within the board", x);
+        }
+
+        let column = &self.pieces[x];
+
+        for y in (1..=H).rev() {
+            let is_pos_below_filled = column[y - 1] != P::AIR;
+            let pos = Pos::new(x, y);
+            let has_barrier_below = self.is_in_bounds(pos)
+                && self.has_barrier_between(pos, Pos::new(x, y - 1));
+
+            if is_pos_below_filled || has_barrier_below {
+                return match y == H {
+                    true => None,
+                    false => Some(y)
+                };
+            }
+        }
+
+        match H == 0 {
+            true => None,
+            false => Some(0)
+        }
+    }
+
     /// Checks if a given position is inside the board.
     ///
     /// # Arguments
@@ -585,5 +628,77 @@ mod tests {
     fn has_barrier_diagonally_adjacent_panics() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.has_barrier_between(Pos::new(1, 2), Pos::new(2, 3));
+    }
+
+    #[test]
+    fn surface_zero_height_none() {
+        let board: BoardState<TestPiece, 15, 0> = BoardState::new();
+        assert!(board.surface(1).is_none());
+    }
+
+    #[test]
+    fn surface_all_air_zero() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        assert_eq!(0, board.surface(1).unwrap());
+    }
+
+    #[test]
+    fn surface_all_filled_none() {
+        let mut board: BoardState<TestPiece, 15, 8> = BoardState::new();
+        let x = 1;
+
+        for y in 0..8 {
+            board.set_piece(Pos::new(x, y), TestPiece::First);
+        }
+
+        assert!(board.surface(x).is_none());
+    }
+
+    #[test]
+    fn surface_top_filled_none() {
+        let mut board: BoardState<TestPiece, 15, 8> = BoardState::new();
+        let x = 1;
+
+        for y in 4..8 {
+            board.set_piece(Pos::new(x, y), TestPiece::First);
+        }
+
+        assert!(board.surface(x).is_none());
+    }
+
+    #[test]
+    fn surface_air_pockets_finds_topmost() {
+        let mut board: BoardState<TestPiece, 15, 8> = BoardState::new();
+        let x = 1;
+
+        board.set_piece(Pos::new(x, 1), TestPiece::First);
+        board.set_piece(Pos::new(x, 2), TestPiece::Second);
+        board.set_piece(Pos::new(x, 5), TestPiece::First);
+
+        board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 3), true);
+
+        assert_eq!(6, board.surface(x).unwrap());
+    }
+
+    #[test]
+    fn surface_barrier_below_top_finds_barrier() {
+        let mut board: BoardState<TestPiece, 15, 8> = BoardState::new();
+        let x = 1;
+
+        board.set_piece(Pos::new(x, 1), TestPiece::First);
+        board.set_piece(Pos::new(x, 2), TestPiece::Second);
+        board.set_piece(Pos::new(x, 5), TestPiece::First);
+
+        board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 3), true);
+        board.set_barrier_between(Pos::new(1, 6), Pos::new(1, 7), true);
+
+        assert_eq!(7, board.surface(x).unwrap());
+    }
+
+    #[test]
+    #[should_panic]
+    fn surface_column_index_out_of_bounds_panics() {
+        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.surface(15);
     }
 }

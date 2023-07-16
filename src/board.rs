@@ -234,7 +234,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                     false => y
                 };
 
-                if new_y > 0 {
+                // Don't shift pieces below if there is a barrier or the piece is now at the bottom
+                // of the board
+                if new_y > air_interval.begin_y {
                     let y_below = new_y - 1;
                     if let Some(air_x) = self.closest_air_in_row(x, y_below, &air_by_row) {
 
@@ -1045,6 +1047,19 @@ mod tests {
         board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+    }
+
+    #[test]
+    fn board_gravity_drop_onto_barrier() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(0, 15), TestPiece::First);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
     }
 }

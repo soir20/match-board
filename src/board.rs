@@ -194,8 +194,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     pub fn apply_gravity_to_board(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        let mut air_by_row: [usize; H] = [0; H];
-        let mut air_by_col = self.find_air_intervals();
+        let (mut air_by_row, mut air_by_col) = self.scan_air();
 
         // Initially, fill the queue with every position on the board
         let mut pos_to_update: VecDeque<Pos> = (0..H)
@@ -385,8 +384,10 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         first.x().min(second.x())
     }
 
-    /// Scans the whole board to find air intervals for each column.
-    fn find_air_intervals(&self) -> [Vec<AirInterval>; W] {
+    /// Scans the whole board to find air intervals for each column and number of empty spaces
+    /// per row.
+    fn scan_air(&self) -> ([usize; H], [Vec<AirInterval>; W]) {
+        let mut air_by_row = [0; H];
         let mut intervals_by_col: [Vec<AirInterval>; W] = from_fn(|_| Vec::new());
 
         for (x, col_intervals) in intervals_by_col.iter_mut().enumerate() {
@@ -396,6 +397,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
             for y in 0..H {
                 if self.pieces[x][y] == P::AIR {
                     air_ys.insert(y);
+                    air_by_row[y] += 1;
                 }
 
                 let pos = Pos::new(x, y);
@@ -418,7 +420,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
             }
         }
 
-        intervals_by_col
+        (air_by_row, intervals_by_col)
     }
 
     /// Gets the air interval that contains the given point, if any.
@@ -531,7 +533,7 @@ mod tests {
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
     enum TestPiece {
         #[default]
-        None = 0b00,
+        Air = 0b00,
         First = 0b01,
         Second = 0b10
     }
@@ -541,7 +543,7 @@ mod tests {
             match value {
                 0 => TestPiece::First,
                 1 => TestPiece::Second,
-                _ => TestPiece::None
+                _ => TestPiece::Air
             }
         }
     }
@@ -551,7 +553,7 @@ mod tests {
 
         fn bitand(self, rhs: Self) -> Self::Output {
             match self as u8 & rhs as u8 {
-                0b00 => TestPiece::None,
+                0b00 => TestPiece::Air,
                 0b01 => TestPiece::First,
                 0b10 => TestPiece::Second,
                 _ => panic!("impossible")
@@ -561,19 +563,19 @@ mod tests {
 
     impl Piece for TestPiece {
         type MatchType = u8;
-        const AIR: Self = Self::None;
+        const AIR: Self = Self::Air;
     }
 
     #[test]
     fn get_piece_zero_zero_default_retrieved() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        assert_eq!(TestPiece::None, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
     }
 
     #[test]
     fn get_piece_never_set_default_retrieved() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        assert_eq!(TestPiece::None, board.piece(Pos::new(5, 10)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(5, 10)));
     }
 
     #[test]
@@ -979,7 +981,7 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         assert!(board.apply_gravity_to_column(1).is_empty());
         for y in 0..16 {
-            assert_eq!(TestPiece::None, board.piece(Pos::new(1, y)));
+            assert_eq!(TestPiece::Air, board.piece(Pos::new(1, y)));
         }
     }
 
@@ -1014,12 +1016,12 @@ mod tests {
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(x, 0)));
         assert_eq!(TestPiece::Second, board.piece(Pos::new(x, 1)));
-        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 2)));
-        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 3)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(x, 2)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(x, 3)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(x, 4)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(x, 5)));
-        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 6)));
-        assert_eq!(TestPiece::None, board.piece(Pos::new(x, 7)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(x, 6)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(x, 7)));
     }
 
     #[test]
@@ -1034,5 +1036,15 @@ mod tests {
     fn column_gravity_column_index_very_large_panics() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.apply_gravity_to_column(usize::MAX);
+    }
+
+    #[test]
+    fn board_gravity_simple_drop() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(0, 15), TestPiece::First);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::First, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
     }
 }

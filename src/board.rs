@@ -1064,7 +1064,24 @@ mod tests {
     }
 
     #[test]
-    fn board_gravity_two_drop_onto_barrier() {
+    fn board_gravity_two_drop_onto_barrier_shift_left() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(1, 15), TestPiece::First);
+        board.set_piece(Pos::new(1, 14), TestPiece::Second);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 5)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(1, 6)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 7)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 14)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 15)));
+    }
+
+    #[test]
+    fn board_gravity_two_drop_onto_barrier_shift_right() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 15), TestPiece::First);
         board.set_piece(Pos::new(0, 14), TestPiece::Second);

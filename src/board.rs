@@ -226,7 +226,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
 
                         // Update bookkeeping about where air is on the board
                         air_interval.air_ys.remove(&air_y);
+                        air_by_row[air_y] +- 1;
                         air_interval.air_ys.insert(y);
+                        air_by_row[y] += 1;
 
                         air_y
                     },
@@ -256,6 +258,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
 
                         // Update bookkeeping about where air is on the board
                         air_interval.air_ys.insert(new_y);
+                        air_by_row[new_y] += 1;
                         BoardState::<P, W, H>::air_interval(&mut air_by_col, air_x, y_below)
                             .unwrap()
                             .air_ys

@@ -499,7 +499,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                 }
             },
             false => {
-                for x in ((start_x + 1)..=end_x).rev() {
+                for x in ((end_x + 1)..=start_x).rev() {
                     let left_pos =  Pos::new(x - 1, y);
                     let right_pos = Pos::new(x, y);
 
@@ -1060,6 +1060,23 @@ mod tests {
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+    }
+
+    #[test]
+    fn board_gravity_two_drop_onto_barrier() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(0, 15), TestPiece::First);
+        board.set_piece(Pos::new(0, 14), TestPiece::Second);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 7)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(1, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
     }
 }

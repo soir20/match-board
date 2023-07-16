@@ -1,4 +1,6 @@
-use std::collections::VecDeque;
+use std::array::from_fn;
+use std::cmp::Ordering::{Equal, Greater, Less};
+use std::collections::{BTreeSet, VecDeque};
 use crate::position::Pos;
 
 use std::ops::BitAnd;
@@ -185,6 +187,89 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         moves
     }
 
+    /// Makes all the pieces on the board fall as if there was gravity. Returns a vector of swaps
+    /// that were made to move the pieces, which is useful for producing an animation of the pieces
+    /// falling. For example, if the resultant vector contains ((2, 3), (2, 4)), then (2, 3) and
+    /// (2, 4) were swapped. The swaps are in the order in which they were applied to the board.
+    pub fn apply_gravity_to_board(&mut self) -> Vec<(Pos, Pos)> {
+        let mut moves = Vec::new();
+
+        let mut air_by_row: [usize; H] = [0; H];
+        let mut air_by_col = self.find_air_intervals();
+
+        // Initially, fill the queue with every position on the board
+        let mut pos_to_update: VecDeque<Pos> = (0..H)
+            .flat_map(|y| (0..W).map(move |x| Pos::new(x, y)))
+            .collect();
+
+        while let Some(pos) = pos_to_update.pop_front() {
+            let x = pos.x();
+            let y = pos.y();
+
+            if self.pieces[x][y] != P::AIR {
+                let air_interval = BoardState::<P, W, H>::air_interval(&mut air_by_col, x, y)
+                    .unwrap();
+
+                let is_air_below = air_interval.air_ys.first()
+                    .map(|&air_y| air_y < y)
+                    .unwrap_or(false);
+
+                let new_y = match is_air_below {
+                    true => {
+                        let air_y = *air_interval.air_ys.first().unwrap();
+                        let air_pos = Pos::new(x, air_y);
+
+                        // Move the piece that should fall into the empty space furthest below
+                        // in the same column, without moving past any barriers
+                        self.swap(pos, air_pos);
+                        moves.push((pos, air_pos));
+
+                        // Update bookkeeping about where air is on the board
+                        air_interval.air_ys.remove(&air_y);
+                        air_interval.air_ys.insert(y);
+
+                        air_y
+                    },
+                    false => y
+                };
+
+                if new_y > 0 {
+                    let y_below = new_y - 1;
+                    if let Some(air_x) = self.closest_air_in_row(x, y_below, &air_by_row) {
+
+                        // Shift pieces in the row below so that air is directly below the piece
+                        // that just fell
+                        moves.append(&mut self.rotate_row(y_below, air_x, x));
+
+                        // Move the piece that just fell into the empty space below.
+                        let air_pos = Pos::new(x, y_below);
+                        let cur_pos = Pos::new(x, new_y);
+                        self.swap(air_pos, cur_pos);
+                        moves.push((cur_pos, air_pos));
+
+                        // The filled position may need to be updated. For example, it might have
+                        // been pushed over the edge of a barrier and need to fall further. It
+                        // should be updated first since it must be below all other positions in
+                        // the queue, and this method works under the assumption that lower rows
+                        // will be fully processed before upper rows.
+                        pos_to_update.push_front(Pos::new(air_x, y_below));
+
+                        // Update bookkeeping about where air is on the board
+                        air_interval.air_ys.insert(new_y);
+                        BoardState::<P, W, H>::air_interval(&mut air_by_col, air_x, y_below)
+                            .unwrap()
+                            .air_ys
+                            .remove(&y_below);
+                        air_by_row[y_below] -= 1;
+
+                    }
+                }
+            }
+        }
+
+        moves
+    }
+
     /// Checks if a given position is inside the board.
     ///
     /// # Arguments
@@ -297,12 +382,142 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         first.x().min(second.x())
     }
 
+    /// Scans the whole board to find air intervals for each column.
+    fn find_air_intervals(&self) -> [Vec<AirInterval>; W] {
+        let mut intervals_by_col: [Vec<AirInterval>; W] = from_fn(|_| Vec::new());
+
+        for (x, col_intervals) in intervals_by_col.iter_mut().enumerate() {
+            let mut begin_y = 0;
+            let mut air_ys = BTreeSet::new();
+
+            for y in 0..H {
+                if self.pieces[x][y] == P::AIR {
+                    air_ys.insert(y);
+                }
+
+                let pos = Pos::new(x, y);
+                let barrier_above = y < H - 1 && self.has_barrier_between(pos, pos + Pos::new(0, 1));
+
+                // End an interval at a barrier or at the top of the board
+                if barrier_above || y == H - 1 {
+                    let interval = AirInterval {
+                        begin_y,
+                        end_y: y,
+                        air_ys: air_ys.clone(),
+                    };
+
+                    col_intervals.push(interval);
+
+                    begin_y = y + 1;
+                    air_ys.clear();
+                }
+
+            }
+        }
+
+        intervals_by_col
+    }
+
+    /// Gets the air interval that contains the given point, if any.
+    ///
+    /// # Arguments
+    ///
+    /// * `intervals` - intervals for each column
+    /// * `x` - x-coordinate of the point to find the interval of
+    /// * `y` - y-coordinate of the point to find the interval of
+    fn air_interval(intervals: &mut [Vec<AirInterval>; W], x: usize, y: usize) -> Option<&mut AirInterval> {
+        let interval_index = intervals[x].binary_search_by(|interval| {
+            if interval.begin_y > y {
+                return Greater;
+            }
+
+            if interval.end_y < y {
+                return Less;
+            }
+
+            Equal
+        }).ok()?;
+
+        Some(&mut intervals[x][interval_index])
+    }
+
+    /// Finds the closest empty space to the given column in the given row, in either direction.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - column to search from
+    /// * `y` - row to search in
+    /// `air_by_row` - count of empty spaces in each row
+    ///
+    /// # Panics
+    ///
+    /// Panics if `air_by_row` indicates there is air in the row, but none could be found.
+    fn closest_air_in_row(&self, x: usize, y: usize, air_by_row: &[usize; H]) -> Option<usize> {
+        if air_by_row[y] == 0 {
+            return None;
+        }
+
+        for diff in 1..W {
+            if diff <= x && self.pieces[x - diff][y] == P::AIR {
+                return Some(x - diff);
+            }
+
+            if diff <= W - 1 - x && self.pieces[x + diff][y] == P::AIR {
+                return Some(x + diff);
+            }
+        }
+
+        panic!("air_by_row claims {} air spaces in row {}, but none found", air_by_row[y], y)
+    }
+
+    /// Rotates the given row by one so that the piece in `start_x` moves into the space in `end_x`.
+    /// Returns the swaps made to perform the rotation.
+    ///
+    /// # Arguments
+    ///
+    /// * `y` - index of the row to rotate
+    /// * `start_x` - x-coordinate of the piece that will move to `end_x`
+    /// * `end_x` - destination of the piece at `start_x` after the rotation
+    fn rotate_row(&mut self, y: usize, start_x: usize, end_x: usize) -> Vec<(Pos, Pos)> {
+        let mut moves = Vec::new();
+
+        match start_x <= end_x {
+            true => {
+                for x in start_x..end_x {
+                    let left_pos =  Pos::new(x, y);
+                    let right_pos = Pos::new(x + 1, y);
+
+                    self.swap(left_pos, right_pos);
+                    moves.push((left_pos, right_pos));
+                }
+            },
+            false => {
+                for x in ((start_x + 1)..=end_x).rev() {
+                    let left_pos =  Pos::new(x - 1, y);
+                    let right_pos = Pos::new(x, y);
+
+                    self.swap(left_pos, right_pos);
+                    moves.push((left_pos, right_pos));
+                }
+            }
+        }
+
+        moves
+    }
+
 }
 
 impl<P: Piece, const W: usize, const H: usize> Default for BoardState<P, W, H> {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Describes what y positions in a column contain air, between begin_y and end_y (inclusive).
+struct AirInterval {
+    begin_y: usize,
+    end_y: usize,
+    air_ys: BTreeSet<usize>
 }
 
 #[cfg(test)]

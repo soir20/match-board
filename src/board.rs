@@ -194,7 +194,8 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     pub fn apply_gravity_to_board(&mut self) -> Vec<(Pos, Pos)> {
         let mut moves = Vec::new();
 
-        let (mut air_by_row, mut air_by_col) = self.scan_air();
+        let mut air_by_row = self.scan_row_air();
+        let mut air_by_col = self.scan_col_air();
 
         // Initially, fill the queue with every position on the board
         let mut pos_to_update: VecDeque<Pos> = (0..H)
@@ -206,16 +207,16 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
             let y = pos.y();
 
             if self.pieces[x][y] != P::AIR {
-                let air_interval = BoardState::<P, W, H>::air_interval(&mut air_by_col, x, y)
+                let col_air_interval = BoardState::<P, W, H>::col_air_interval(&mut air_by_col, x, y)
                     .unwrap();
 
-                let is_air_below = air_interval.air_ys.first()
+                let is_air_below = col_air_interval.air_ys.first()
                     .map(|&air_y| air_y < y)
                     .unwrap_or(false);
 
                 let new_y = match is_air_below {
                     true => {
-                        let air_y = *air_interval.air_ys.first().unwrap();
+                        let air_y = *col_air_interval.air_ys.first().unwrap();
                         let air_pos = Pos::new(x, air_y);
 
                         // Move the piece that should fall into the empty space furthest below
@@ -224,10 +225,14 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                         moves.push((pos, air_pos));
 
                         // Update bookkeeping about where air is on the board
-                        air_interval.air_ys.insert(y);
-                        air_by_row[y] += 1;
-                        air_interval.air_ys.remove(&air_y);
-                        air_by_row[air_y] -= 1;
+                        col_air_interval.air_ys.insert(y);
+                        BoardState::<P, W, H>::row_air_interval(&mut air_by_row, x, y)
+                            .unwrap()
+                            .air_count += 1;
+                        col_air_interval.air_ys.remove(&air_y);
+                        BoardState::<P, W, H>::row_air_interval(&mut air_by_row, x, air_y)
+                            .unwrap()
+                            .air_count -= 1;
 
                         air_y
                     },
@@ -236,9 +241,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
 
                 // Don't shift pieces below if there is a barrier or the piece is now at the bottom
                 // of the board
-                if new_y > air_interval.begin_y {
+                if new_y > col_air_interval.begin_y {
                     let y_below = new_y - 1;
-                    if let Some(air_x) = self.closest_air_in_row(x, y_below, &air_by_row) {
+                    if let Some(air_x) = self.closest_air_in_row(x, y_below, &mut air_by_row) {
 
                         // Shift pieces in the row below so that air is directly below the piece
                         // that just fell
@@ -258,13 +263,17 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                         pos_to_update.push_front(Pos::new(air_x, y_below));
 
                         // Update bookkeeping about where air is on the board
-                        air_interval.air_ys.insert(new_y);
-                        air_by_row[new_y] += 1;
-                        BoardState::<P, W, H>::air_interval(&mut air_by_col, air_x, y_below)
+                        col_air_interval.air_ys.insert(new_y);
+                        BoardState::<P, W, H>::row_air_interval(&mut air_by_row, x, new_y)
+                            .unwrap()
+                            .air_count += 1;
+                        BoardState::<P, W, H>::col_air_interval(&mut air_by_col, air_x, y_below)
                             .unwrap()
                             .air_ys
                             .remove(&y_below);
-                        air_by_row[y_below] -= 1;
+                        BoardState::<P, W, H>::row_air_interval(&mut air_by_row, air_x, y_below)
+                            .unwrap()
+                            .air_count -= 1;
 
                     }
                 }
@@ -386,20 +395,53 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         first.x().min(second.x())
     }
 
-    /// Scans the whole board to find air intervals for each column and number of empty spaces
-    /// per row.
-    fn scan_air(&self) -> ([usize; H], [Vec<AirInterval>; W]) {
-        let mut air_by_row = [0; H];
-        let mut intervals_by_col: [Vec<AirInterval>; W] = from_fn(|_| Vec::new());
+    /// Scans the whole board to find air intervals for each column..
+    fn scan_row_air(&self) -> [Vec<RowAirInterval>; H] {
+        let mut intervals: [Vec<RowAirInterval>; H] = from_fn(|_| Vec::new());
 
-        for (x, col_intervals) in intervals_by_col.iter_mut().enumerate() {
+        for (y, row_intervals) in intervals.iter_mut().enumerate() {
+            let mut begin_x = 0;
+            let mut air_count = 0;
+
+            for x in 0..W {
+                if self.pieces[x][y] == P::AIR {
+                    air_count += 1;
+                }
+
+                let pos = Pos::new(x, y);
+                let barrier_right = x < W - 1 && self.has_barrier_between(pos, pos + Pos::new(1, 0));
+
+                // End an interval at a barrier or at the top of the board
+                if barrier_right || x == W - 1 {
+                    let interval = RowAirInterval {
+                        begin_x,
+                        end_x: x,
+                        air_count,
+                    };
+
+                    row_intervals.push(interval);
+
+                    begin_x = x + 1;
+                    air_count = 0;
+                }
+
+            }
+        }
+
+        intervals
+    }
+
+    /// Scans the whole board to find air intervals for each column..
+    fn scan_col_air(&self) -> [Vec<ColAirInterval>; W] {
+        let mut intervals: [Vec<ColAirInterval>; W] = from_fn(|_| Vec::new());
+
+        for (x, col_intervals) in intervals.iter_mut().enumerate() {
             let mut begin_y = 0;
             let mut air_ys = BTreeSet::new();
 
             for y in 0..H {
                 if self.pieces[x][y] == P::AIR {
                     air_ys.insert(y);
-                    air_by_row[y] += 1;
                 }
 
                 let pos = Pos::new(x, y);
@@ -407,7 +449,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
 
                 // End an interval at a barrier or at the top of the board
                 if barrier_above || y == H - 1 {
-                    let interval = AirInterval {
+                    let interval = ColAirInterval {
                         begin_y,
                         end_y: y,
                         air_ys: air_ys.clone(),
@@ -422,17 +464,40 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
             }
         }
 
-        (air_by_row, intervals_by_col)
+        intervals
     }
 
-    /// Gets the air interval that contains the given point, if any.
+    /// Gets the row air interval that contains the given point, if any.
+    ///
+    /// # Arguments
+    ///
+    /// * `intervals` - intervals for each row
+    /// * `x` - x-coordinate of the point to find the interval of
+    /// * `y` - y-coordinate of the point to find the interval of
+    fn row_air_interval(intervals: &mut [Vec<RowAirInterval>; H], x: usize, y: usize) -> Option<&mut RowAirInterval> {
+        let interval_index = intervals[y].binary_search_by(|interval| {
+            if interval.begin_x > x {
+                return Greater;
+            }
+
+            if interval.end_x < x {
+                return Less;
+            }
+
+            Equal
+        }).ok()?;
+
+        Some(&mut intervals[y][interval_index])
+    }
+
+    /// Gets the column air interval that contains the given point, if any.
     ///
     /// # Arguments
     ///
     /// * `intervals` - intervals for each column
     /// * `x` - x-coordinate of the point to find the interval of
     /// * `y` - y-coordinate of the point to find the interval of
-    fn air_interval(intervals: &mut [Vec<AirInterval>; W], x: usize, y: usize) -> Option<&mut AirInterval> {
+    fn col_air_interval(intervals: &mut [Vec<ColAirInterval>; W], x: usize, y: usize) -> Option<&mut ColAirInterval> {
         let interval_index = intervals[x].binary_search_by(|interval| {
             if interval.begin_y > y {
                 return Greater;
@@ -459,22 +524,24 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Panics
     ///
     /// Panics if `air_by_row` indicates there is air in the row, but none could be found.
-    fn closest_air_in_row(&self, x: usize, y: usize, air_by_row: &[usize; H]) -> Option<usize> {
-        if air_by_row[y] == 0 {
+    fn closest_air_in_row(&self, x: usize, y: usize, air_by_row: &mut [Vec<RowAirInterval>; H]) -> Option<usize> {
+        let interval = BoardState::<P, W, H>::row_air_interval(air_by_row, x, y)?;
+
+        if interval.air_count == 0 {
             return None;
         }
 
         for diff in 1..W {
-            if diff <= x && self.pieces[x - diff][y] == P::AIR {
+            if diff <= x - interval.begin_x && self.pieces[x - diff][y] == P::AIR {
                 return Some(x - diff);
             }
 
-            if diff <= W - 1 - x && self.pieces[x + diff][y] == P::AIR {
+            if diff <= interval.end_x - x && self.pieces[x + diff][y] == P::AIR {
                 return Some(x + diff);
             }
         }
 
-        panic!("air_by_row claims {} air spaces in row {}, but none found", air_by_row[y], y)
+        panic!("air_by_row claims {} air spaces in row {}, but none found", interval.air_count, y)
     }
 
     /// Rotates the given row by one so that the piece in `start_x` moves into the space in `end_x`.
@@ -520,8 +587,15 @@ impl<P: Piece, const W: usize, const H: usize> Default for BoardState<P, W, H> {
     }
 }
 
+/// Counts which x positions in a column contain air, between begin_x and end_x (inclusive).
+struct RowAirInterval {
+    begin_x: usize,
+    end_x: usize,
+    air_count: usize
+}
+
 /// Describes what y positions in a column contain air, between begin_y and end_y (inclusive).
-struct AirInterval {
+struct ColAirInterval {
     begin_y: usize,
     end_y: usize,
     air_ys: BTreeSet<usize>
@@ -1095,5 +1169,41 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+    }
+
+    #[test]
+    fn board_gravity_two_drop_onto_barrier_barrier_blocks_right() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(0, 15), TestPiece::First);
+        board.set_piece(Pos::new(0, 14), TestPiece::Second);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(0, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(0, 7)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 14)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+    }
+
+    #[test]
+    fn board_gravity_two_drop_onto_barrier_barrier_blocks_left() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(1, 15), TestPiece::First);
+        board.set_piece(Pos::new(1, 14), TestPiece::Second);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 5)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(1, 6)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 7)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(2, 0)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 14)));
+        assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 15)));
     }
 }

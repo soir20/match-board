@@ -603,6 +603,7 @@ struct ColAirInterval {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::ops::BitAnd;
     use crate::{BoardState, Piece, Pos};
 
@@ -1205,5 +1206,63 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(2, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 15)));
+    }
+
+    #[test]
+    fn board_gravity_cascade() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(2, 2), Pos::new(2, 3), true);
+        board.set_barrier_between(Pos::new(2, 8), Pos::new(2, 9), true);
+        board.set_barrier_between(Pos::new(3, 8), Pos::new(3, 9), true);
+        board.set_barrier_between(Pos::new(4, 8), Pos::new(4, 9), true);
+        board.set_barrier_between(Pos::new(4, 9), Pos::new(5, 9), true);
+
+        board.set_piece(Pos::new(4, 15), TestPiece::First);
+        board.set_piece(Pos::new(4, 14), TestPiece::Second);
+        board.set_piece(Pos::new(4, 13), TestPiece::First);
+        board.set_piece(Pos::new(4, 12), TestPiece::Second);
+        board.set_piece(Pos::new(3, 12), TestPiece::First);
+        board.set_piece(Pos::new(3, 11), TestPiece::Second);
+        board.set_piece(Pos::new(2, 14), TestPiece::First);
+        board.set_piece(Pos::new(1, 15), TestPiece::First);
+        board.set_piece(Pos::new(1, 13), TestPiece::Second);
+
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(0, 0)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(1, 0)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(2, 0)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(3, 0)));
+
+        assert_eq!(TestPiece::First, board.piece(Pos::new(2, 3)));
+
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(1, 6)));
+
+        assert_eq!(TestPiece::First, board.piece(Pos::new(2, 9)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(3, 9)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(4, 9)));
+
+        let mut filled_pos = HashSet::new();
+        filled_pos.insert(Pos::new(0, 0));
+        filled_pos.insert(Pos::new(1, 0));
+        filled_pos.insert(Pos::new(2, 0));
+        filled_pos.insert(Pos::new(3, 0));
+        filled_pos.insert(Pos::new(2, 3));
+        filled_pos.insert(Pos::new(1, 6));
+        filled_pos.insert(Pos::new(2, 9));
+        filled_pos.insert(Pos::new(3, 9));
+        filled_pos.insert(Pos::new(4, 9));
+
+        for x in 0..15 {
+            for y in 0..16 {
+                let pos = Pos::new(x, y);
+                if !filled_pos.contains(&pos) {
+                    assert_eq!(TestPiece::Air, board.piece(Pos::new(x, y)));
+                }
+            }
+        }
     }
 }

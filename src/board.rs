@@ -239,7 +239,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                     false => y
                 };
 
-                // Don't shift pieces below if there is a barrier or the piece is now at the bottom
+                // Don't shift pieces down if there is a barrier or the piece is now at the bottom
                 // of the board
                 if new_y > col_air_interval.begin_y {
                     let y_below = new_y - 1;

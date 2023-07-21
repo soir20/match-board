@@ -1260,6 +1260,67 @@ mod tests {
             for y in 0..16 {
                 let pos = Pos::new(x, y);
                 if !filled_pos.contains(&pos) {
+                    assert_eq!(TestPiece::Air, board.piece(pos));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn board_gravity_two_drop_onto_barrier_edge_blocks_left() {
+        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
+        board.set_piece(Pos::new(1, 15), TestPiece::First);
+
+        board.set_piece(Pos::new(0, 13), TestPiece::First);
+        board.set_piece(Pos::new(1, 14), TestPiece::Second);
+        board.set_piece(Pos::new(2, 7), TestPiece::First);
+        board.set_piece(Pos::new(3, 6), TestPiece::Second);
+        board.set_piece(Pos::new(4, 8), TestPiece::First);
+        board.set_piece(Pos::new(5, 10), TestPiece::First);
+        board.set_piece(Pos::new(6, 6), TestPiece::Second);
+        board.set_piece(Pos::new(7, 6), TestPiece::Second);
+        board.set_piece(Pos::new(8, 7), TestPiece::First);
+        board.set_piece(Pos::new(9, 6), TestPiece::Second);
+        board.set_piece(Pos::new(10, 13), TestPiece::First);
+        board.set_piece(Pos::new(11, 12), TestPiece::Second);
+        board.set_piece(Pos::new(12, 10), TestPiece::Second);
+        board.set_piece(Pos::new(13, 6), TestPiece::First);
+
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true);
+        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true);
+        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true);
+        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true);
+        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true);
+        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
+        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
+        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true);
+        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true);
+        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true);
+        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
+        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
+        board.apply_gravity_to_board();
+
+        assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(1, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(2, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(3, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(4, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(5, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(6, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(7, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(8, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(9, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(10, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(11, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(12, 6)));
+        assert_eq!(TestPiece::Second, board.piece(Pos::new(13, 6)));
+        assert_eq!(TestPiece::First, board.piece(Pos::new(14, 0)));
+
+        for x in 0..15 {
+            for y in 0..16 {
+                if (x != 14 && y != 6) || (x == 14 && y != 0) {
                     assert_eq!(TestPiece::Air, board.piece(Pos::new(x, y)));
                 }
             }

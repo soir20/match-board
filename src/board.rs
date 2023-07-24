@@ -643,6 +643,25 @@ mod tests {
         const AIR: Self = Self::Air;
     }
 
+    fn moves_produce_board<const W: usize, const H: usize>(moves: &Vec<(Pos, Pos)>,
+                                                           start: &mut BoardState<TestPiece, W, H>,
+                                                           end: &BoardState<TestPiece, W, H>) -> bool {
+        for (first, second) in moves {
+            start.swap(*first, *second);
+        }
+
+        for x in 0..W {
+            for y in 0..H {
+                let pos = Pos::new(x, y);
+                if start.piece(pos) != end.piece(pos) {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
     #[test]
     fn get_piece_zero_zero_default_retrieved() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
@@ -1119,10 +1138,14 @@ mod tests {
     fn board_gravity_simple_drop() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 15), TestPiece::First);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1130,12 +1153,16 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 15), TestPiece::First);
         board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1143,12 +1170,16 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 0), TestPiece::First);
         board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 6)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1156,12 +1187,16 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 6), TestPiece::First);
         board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1170,7 +1205,9 @@ mod tests {
         board.set_piece(Pos::new(1, 15), TestPiece::First);
         board.set_piece(Pos::new(1, 14), TestPiece::Second);
         board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 5)));
@@ -1179,6 +1216,8 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1187,7 +1226,9 @@ mod tests {
         board.set_piece(Pos::new(0, 15), TestPiece::First);
         board.set_piece(Pos::new(0, 14), TestPiece::Second);
         board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
@@ -1196,6 +1237,8 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1205,7 +1248,9 @@ mod tests {
         board.set_piece(Pos::new(0, 14), TestPiece::Second);
         board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
         board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
@@ -1214,6 +1259,8 @@ mod tests {
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1223,7 +1270,9 @@ mod tests {
         board.set_piece(Pos::new(1, 14), TestPiece::Second);
         board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
         board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 5)));
@@ -1232,6 +1281,8 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(2, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1268,7 +1319,9 @@ mod tests {
         board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true);
         board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
         board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 6)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(1, 6)));
@@ -1293,6 +1346,8 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1329,7 +1384,9 @@ mod tests {
         board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
         board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
         board.set_barrier_between(Pos::new(14, 5), Pos::new(14, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Second, board.piece(Pos::new(1, 6)));
@@ -1354,6 +1411,8 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1392,7 +1451,9 @@ mod tests {
         board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
         board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
         board.set_barrier_between(Pos::new(14, 5), Pos::new(14, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(4, 7)));
 
@@ -1419,6 +1480,8 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1441,7 +1504,9 @@ mod tests {
         board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
         board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
         board.set_barrier_between(Pos::new(8, 6), Pos::new(9, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(4, 7)));
 
@@ -1459,6 +1524,8 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1467,7 +1534,9 @@ mod tests {
         board.set_piece(Pos::new(1, 7), TestPiece::First);
         board.set_piece(Pos::new(1, 6), TestPiece::Second);
         board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 5)));
@@ -1476,6 +1545,8 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(1, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1484,7 +1555,9 @@ mod tests {
         board.set_piece(Pos::new(0, 7), TestPiece::First);
         board.set_piece(Pos::new(0, 6), TestPiece::Second);
         board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 5)));
@@ -1493,6 +1566,8 @@ mod tests {
         assert_eq!(TestPiece::Second, board.piece(Pos::new(1, 0)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 14)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(0, 15)));
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1512,7 +1587,9 @@ mod tests {
         board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
         board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
         board.set_barrier_between(Pos::new(8, 6), Pos::new(9, 6), true);
-        board.apply_gravity_to_board();
+
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Second, board.piece(Pos::new(3, 6)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(4, 6)));
@@ -1526,6 +1603,8 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1550,7 +1629,8 @@ mod tests {
         board.set_piece(Pos::new(1, 15), TestPiece::First);
         board.set_piece(Pos::new(1, 13), TestPiece::Second);
 
-        board.apply_gravity_to_board();
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::Second, board.piece(Pos::new(0, 0)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(1, 0)));
@@ -1584,6 +1664,8 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 
     #[test]
@@ -1616,7 +1698,8 @@ mod tests {
         board.set_barrier_between(Pos::new(5, 2), Pos::new(6, 2), true);
         board.set_barrier_between(Pos::new(8, 2), Pos::new(9, 2), true);
 
-        board.apply_gravity_to_board();
+        let mut start_board = board.clone();
+        let moves = board.apply_gravity_to_board();
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(4, 0)));
         assert_eq!(TestPiece::First, board.piece(Pos::new(5, 0)));
@@ -1667,5 +1750,7 @@ mod tests {
                 }
             }
         }
+
+        assert!(moves_produce_board(&moves, &mut start_board, &board));
     }
 }

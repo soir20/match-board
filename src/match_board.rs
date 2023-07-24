@@ -17,13 +17,13 @@ pub struct MatchBoard<
     'a,
     M,
     P,
-    const WIDTH: usize,
-    const HEIGHT: usize
+    const BOARD_WIDTH: usize,
+    const BOARD_HEIGHT: usize
 > {
-    board: BoardState<P, WIDTH, HEIGHT>,
-    patterns: Vec<&'a MatchPattern<M>>,
-    matches: VecDeque<Match<'a, M>>,
-    close_matches: VecDeque<CloseMatch<'a, M>>
+    board: BoardState<P, BOARD_WIDTH, BOARD_HEIGHT>,
+    patterns: Vec<&'a MatchPattern<M, BOARD_WIDTH, BOARD_HEIGHT>>,
+    matches: VecDeque<Match<'a, M, BOARD_WIDTH, BOARD_HEIGHT>>,
+    close_matches: VecDeque<CloseMatch<'a, M, BOARD_WIDTH, BOARD_HEIGHT>>
 }
 
 impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<'_, M, P, W, H> {
@@ -38,7 +38,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///                order provided. For example, if one pattern matches a column of five pieces
     ///                and another matches a column of three pieces, the column of five pattern
     ///                should probably be first.
-    pub fn new(board: BoardState<P, W, H>, patterns: Vec<&MatchPattern<M>>) -> MatchBoard<M, P, W, H> {
+    pub fn new(board: BoardState<P, W, H>, patterns: Vec<&MatchPattern<M, W, H>>) -> MatchBoard<M, P, W, H> {
         let mut match_board = MatchBoard {
             board,
             patterns,
@@ -61,7 +61,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// # Arguments
     ///
     /// * `pos` - the position of the piece whose type to find
-    pub fn piece(&self, pos: Pos) -> P {
+    pub fn piece(&self, pos: Pos<W, H>) -> P {
         self.board.piece(pos)
     }
 
@@ -72,11 +72,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// * `pos` - the position of the piece to replace
     /// * `piece` - the piece to put at the given position
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided position is outside the board.
-    pub fn set_piece(&mut self, pos: Pos, piece: P) -> P {
+    pub fn set_piece(&mut self, pos: Pos<W, H>, piece: P) -> P {
         let old_piece = self.board.set_piece(pos, piece);
         self.recompute_matches(pos);
         old_piece
@@ -89,11 +85,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// * `first` - the first position of a piece to swap
     /// * `second` - the second position of a piece to swap
-    ///
-    /// # Panics
-    ///
-    /// Panics if either position is outside the board.
-    pub fn swap(&mut self, first: Pos, second: Pos) {
+    pub fn swap(&mut self, first: Pos<W, H>, second: Pos<W, H>) {
         if first == second {
             return;
         }
@@ -111,7 +103,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// All positions are checked for a match the first time this method is run.
     ///
     /// Pieces that were changed but did not create a match are skipped.
-    pub fn next_match(&mut self) -> Option<Match<M>> {
+    pub fn next_match(&mut self) -> Option<Match<M, W, H>> {
         self.matches.pop_front()
     }
 
@@ -128,7 +120,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// All positions are checked for a close match the first time this method is run.
     ///
     /// Pieces that were changed but did not create a close match are skipped.
-    pub fn next_close_match(&mut self) -> Option<CloseMatch<M>> {
+    pub fn next_close_match(&mut self) -> Option<CloseMatch<M, W, H>> {
         self.close_matches.pop_front()
     }
 
@@ -137,7 +129,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// # Arguments
     ///
     /// * `pos` - the position to check
-    pub fn is_in_bounds(&self, pos: Pos) -> bool {
+    pub fn is_in_bounds(&self, pos: Pos<W, H>) -> bool {
         pos.x() < W && pos.y() < H
     }
 
@@ -182,7 +174,7 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// # Arguments
     ///
     /// * `changed_pos` - the position on the board that changed
-    fn recompute_matches(&mut self, changed_pos: Pos) {
+    fn recompute_matches(&mut self, changed_pos: Pos<W, H>) {
 
         // TODO: replace with drain_filter() once it is stable
         self.matches = self.matches.clone().into_iter()
@@ -227,16 +219,13 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// * `pattern` - the match pattern to check
     /// * `pos` - the position that must be included in a match
-    fn check_pattern<'a>(&self, pattern: &'a MatchPattern<M>, pos: Pos) -> Option<Match<'a, M>> {
-        pattern.iter().find_map(|&original| {
-
-            // Don't check variants outside the board
-            if original.x() > pos.x() || original.y() > pos.y() {
-                return None;
+    fn check_pattern<'a>(&self, pattern: &'a MatchPattern<M, W, H>, pos: Pos<W, H>) -> Option<Match<'a, M, W, H>> {
+        pattern.iter().find_map(
+            |&original| match pos - original {
+                Ok(origin) => self.check_variant(pattern, origin),
+                Err(_) => None
             }
-
-            self.check_variant(pattern, pos - original)
-        }).map(|positions| Match::new(pattern, pos, positions))
+        ).map(|positions| Match::new(pattern, pos, positions))
     }
 
     /// Checks for a single variant of a pattern and returns the corresponding positions
@@ -247,8 +236,8 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// * `pattern` - the match pattern to check
     /// * `new_origin` - the origin to use for the pattern positions so that they
     ///                  correspond to actual positions on the board
-    fn check_variant(&self, pattern: &MatchPattern<M>, new_origin: Pos) -> Option<HashSet<Pos>> {
-        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin);
+    fn check_variant(&self, pattern: &MatchPattern<M, W, H>, new_origin: Pos<W, H>) -> Option<HashSet<Pos<W, H>>> {
+        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin)?;
         let all_match = grid_pos.iter().all(
             |&pos| self.is_in_bounds(pos)
                 && MatchBoard::<M, P, W, H>::matches(pattern.match_type(), self.board.piece(pos))
@@ -268,16 +257,13 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// * `pattern` - the match pattern to check
     /// * `pos` - the position that must be included in a match
-    fn check_close_pattern<'a>(&self, pattern: &'a MatchPattern<M>, pos: Pos) -> Option<CloseMatch<'a, M>> {
-        pattern.iter().find_map(|&original| {
-
-            // Don't check variants outside the board
-            if original.x() > pos.x() || original.y() > pos.y() {
-                return None;
+    fn check_close_pattern<'a>(&self, pattern: &'a MatchPattern<M, W, H>, pos: Pos<W, H>) -> Option<CloseMatch<'a, M, W, H>> {
+        pattern.iter().find_map(
+            |&original| match pos - original {
+                Ok(origin) => self.check_close_variant(pattern, origin),
+                Err(_) => None
             }
-
-            self.check_close_variant(pattern, pos - original)
-        }).map(|(positions, missing_pos)| CloseMatch::new(pattern, missing_pos, positions))
+        ).map(|(positions, missing_pos)| CloseMatch::new(pattern, missing_pos, positions))
     }
 
     /// Checks for a close match of a single variant of a pattern and returns the
@@ -288,14 +274,10 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     /// * `pattern` - the match pattern to check
     /// * `new_origin` - the origin to use for the pattern positions so that they
     ///                  correspond to actual positions on the board
-    fn check_close_variant(&self, pattern: &MatchPattern<M>, new_origin: Pos) -> Option<(HashSet<Pos>, Pos)> {
-        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin);
+    fn check_close_variant(&self, pattern: &MatchPattern<M, W, H>, new_origin: Pos<W, H>) -> Option<(HashSet<Pos<W, H>>, Pos<W, H>)> {
+        let grid_pos = MatchBoard::<M, P, W, H>::change_origin(pattern.iter(), new_origin)?;
 
-        if grid_pos.iter().any(|&pos| !self.is_in_bounds(pos)) {
-            return None;
-        }
-
-        let (matched, unmatched): (HashSet<Pos>, HashSet<Pos>) = grid_pos.iter().partition(
+        let (matched, unmatched): (HashSet<Pos<W, H>>, HashSet<Pos<W, H>>) = grid_pos.iter().partition(
             |&&pos| MatchBoard::<M, P, W, H>::matches(pattern.match_type(), self.board.piece(pos))
         );
 
@@ -311,8 +293,18 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
     ///
     /// * `positions` - the positions to change the origin of
     /// * `origin` - the new origin to use for the positions
-    fn change_origin<'a>(positions: impl Iterator<Item=&'a Pos>, origin: Pos) -> HashSet<Pos> {
-        positions.map(|&original| original + origin).collect()
+    fn change_origin<'a>(positions: impl Iterator<Item=&'a Pos<W, H>>, origin: Pos<W, H>) -> Option<HashSet<Pos<W, H>>> {
+        let mut new_positions = HashSet::new();
+
+        for &pos in positions {
+            if let Ok(new_pos) = pos + origin {
+                new_positions.insert(new_pos);
+            } else {
+                return None;
+            }
+        }
+
+        Some(new_positions)
     }
 
     /// Checks if the given piece has the given match type.
@@ -377,19 +369,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn get_piece_out_of_bounds_x_panics() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let match_board = MatchBoard::new(board, vec![&pattern]);
-
-        match_board.piece(Pos::new(15, 15));
-    }
-
-    #[test]
     fn get_piece_in_bounds_returns_piece() {
         let board = BoardState::<TestPiece, 15, 16>::new();
 
@@ -399,72 +378,6 @@ mod tests {
         let match_board = MatchBoard::new(board, vec![&pattern]);
 
         assert_eq!(TestPiece::None, match_board.piece(Pos::new(0, 0)));
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_piece_out_of_bounds_y_panics() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let match_board = MatchBoard::new(board, vec![&pattern]);
-
-        match_board.piece(Pos::new(14, 16));
-    }
-
-
-    #[test]
-    #[should_panic]
-    fn set_piece_out_of_bounds_x_panics() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let mut match_board = MatchBoard::new(board, vec![&pattern]);
-
-        match_board.set_piece(Pos::new(15, 15), TestPiece::First);
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_piece_out_of_bounds_y_panics() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let mut match_board = MatchBoard::new(board, vec![&pattern]);
-
-        match_board.set_piece(Pos::new(14, 16), TestPiece::First);
-    }
-
-    #[test]
-    #[should_panic]
-    fn swap_piece_first_out_of_bounds_panics() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let mut match_board = MatchBoard::new(board, vec![&pattern]);
-
-        match_board.swap(Pos::new(15, 15), Pos::new(0, 0));
-    }
-
-    #[test]
-    #[should_panic]
-    fn swap_piece_second_out_of_bounds_panics() {
-        let board = BoardState::<TestPiece, 15, 16>::new();
-
-        let pattern_pos = vec![Pos::new(2, 3), Pos::new(3, 3), Pos::new(6, 8)];
-        let pattern = MatchPattern::new(TestMatchType::Second, &pattern_pos[..]);
-
-        let mut match_board = MatchBoard::new(board, vec![&pattern]);
-
-        match_board.swap(Pos::new(0, 0), Pos::new(15, 15));
     }
 
     #[test]

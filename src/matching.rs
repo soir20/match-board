@@ -4,12 +4,12 @@ use crate::position::Pos;
 /// A pattern of piece positions that represents a valid match on a board.
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct MatchPattern<M> {
+pub struct MatchPattern<M, const BOARD_WIDTH: usize, const BOARD_HEIGHT: usize> {
     match_type: M,
-    spaces: HashSet<Pos>
+    spaces: HashSet<Pos<BOARD_WIDTH, BOARD_HEIGHT>>
 }
 
-impl<M: Copy> MatchPattern<M> {
+impl<M: Copy, const W: usize, const H: usize> MatchPattern<M, W, H> {
 
     /// Creates a new pattern.
     ///
@@ -18,7 +18,7 @@ impl<M: Copy> MatchPattern<M> {
     /// * `match_type` - match type all pieces must have for this pattern to apply
     /// * `spaces` - unique positions that represents a pattern. The values of the
     ///              positions do not matter: only their relative positions matter.
-    pub fn new(match_type: M, spaces: &[Pos]) -> MatchPattern<M> {
+    pub fn new(match_type: M, spaces: &[Pos<W, H>]) -> MatchPattern<M, W, H> {
         let min_x = spaces.iter().map(|space | space.x()).min().unwrap_or(0);
         let min_y = spaces.iter().map(|space | space.y()).min().unwrap_or(0);
 
@@ -35,7 +35,7 @@ impl<M: Copy> MatchPattern<M> {
     }
 
     /// Returns an iterator of all of the relative positions in this pattern.
-    pub fn iter(&self) -> impl Iterator<Item=&Pos> {
+    pub fn iter(&self) -> impl Iterator<Item=&Pos<W, H>> {
         self.spaces.iter()
     }
 
@@ -44,13 +44,13 @@ impl<M: Copy> MatchPattern<M> {
 // A match found in a board.
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Match<'a, M> {
-    pattern: &'a MatchPattern<M>,
-    changed_pos: Pos,
-    board_pos: HashSet<Pos>
+pub struct Match<'a, M, const BOARD_WIDTH: usize, const BOARD_HEIGHT: usize> {
+    pattern: &'a MatchPattern<M, BOARD_WIDTH, BOARD_HEIGHT>,
+    changed_pos: Pos<BOARD_WIDTH, BOARD_HEIGHT>,
+    board_pos: HashSet<Pos<BOARD_WIDTH, BOARD_HEIGHT>>
 }
 
-impl<M> Match<'_, M> {
+impl<M, const W: usize, const H: usize> Match<'_, M, W, H> {
 
     /// Creates a new match.
     ///
@@ -59,17 +59,17 @@ impl<M> Match<'_, M> {
     /// * `pattern` - the pattern of the found match
     /// * `changed_pos` - the position that was changed and triggered the match
     /// * `board_pos` - actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern<M>, changed_pos: Pos, board_pos: HashSet<Pos>) -> Match<M> {
+    pub(crate) fn new(pattern: &MatchPattern<M, W, H>, changed_pos: Pos<W, H>, board_pos: HashSet<Pos<W, H>>) -> Match<M, W, H> {
         Match { pattern, changed_pos, board_pos }
     }
 
     /// Gets the pattern associated with this match.
-    pub fn pattern(&self) -> &MatchPattern<M> {
+    pub fn pattern(&self) -> &MatchPattern<M, W, H> {
         self.pattern
     }
 
     /// Gets the changed position that triggered this match.
-    pub fn changed_pos(&self) -> Pos {
+    pub fn changed_pos(&self) -> Pos<W, H> {
         self.changed_pos
     }
 
@@ -78,12 +78,12 @@ impl<M> Match<'_, M> {
     /// # Arguments
     ///
     /// * `pos` - position to check for in this match
-    pub fn contains(&self, pos: Pos) -> bool {
+    pub fn contains(&self, pos: Pos<W, H>) -> bool {
         self.board_pos.contains(&pos)
     }
 
     /// Returns an iterator of all of the board positions where this pattern is located.
-    pub fn iter(&self) -> impl Iterator<Item=&Pos> {
+    pub fn iter(&self) -> impl Iterator<Item=&Pos<W, H>> {
         self.board_pos.iter()
     }
 
@@ -92,13 +92,13 @@ impl<M> Match<'_, M> {
 // A group of pieces where one needs to change to make a match.
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CloseMatch<'a, M> {
-    pattern: &'a MatchPattern<M>,
-    missing_pos: Pos,
-    board_pos: HashSet<Pos>
+pub struct CloseMatch<'a, M, const BOARD_WIDTH: usize, const BOARD_HEIGHT: usize> {
+    pattern: &'a MatchPattern<M, BOARD_WIDTH, BOARD_HEIGHT>,
+    missing_pos: Pos<BOARD_WIDTH, BOARD_HEIGHT>,
+    board_pos: HashSet<Pos<BOARD_WIDTH, BOARD_HEIGHT>>
 }
 
-impl<M> CloseMatch<'_, M> {
+impl<M, const W: usize, const H: usize> CloseMatch<'_, M, W, H> {
 
     /// Creates a new close match, a group of pieces where one piece needs to change
     /// to make a match.
@@ -108,17 +108,17 @@ impl<M> CloseMatch<'_, M> {
     /// * `pattern` - the pattern of the found match
     /// * `missing_pos` - the position that needs to be changed to make a match
     /// * `board_pos` - actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern<M>, missing_pos: Pos, board_pos: HashSet<Pos>) -> CloseMatch<M> {
+    pub(crate) fn new(pattern: &MatchPattern<M, W, H>, missing_pos: Pos<W, H>, board_pos: HashSet<Pos<W, H>>) -> CloseMatch<M, W, H> {
         CloseMatch { pattern, missing_pos, board_pos }
     }
 
     /// Gets the pattern associated with this close match.
-    pub fn pattern(&self) -> &MatchPattern<M> {
+    pub fn pattern(&self) -> &MatchPattern<M, W, H> {
         self.pattern
     }
 
     /// Gets the position that needs to be changed to make a match.
-    pub fn missing_pos(&self) -> Pos {
+    pub fn missing_pos(&self) -> Pos<W, H> {
         self.missing_pos
     }
 
@@ -127,13 +127,13 @@ impl<M> CloseMatch<'_, M> {
     /// # Arguments
     ///
     /// * `pos` - position to check for in this close match
-    pub fn contains(&self, pos: Pos) -> bool {
+    pub fn contains(&self, pos: Pos<W, H>) -> bool {
         self.board_pos.contains(&pos)
     }
 
     /// Returns an iterator of all of the board positions where this pattern is located.
     /// Does not include the position that is missing.
-    pub fn iter(&self) -> impl Iterator<Item=&Pos> {
+    pub fn iter(&self) -> impl Iterator<Item=&Pos<W, H>> {
         self.board_pos.iter()
     }
 
@@ -149,13 +149,13 @@ mod tests {
     #[test]
     fn new_pattern_empty_set_works() {
         let spaces = Vec::new();
-        let pattern = MatchPattern::new(0, &spaces[..]);
+        let pattern: MatchPattern<i32, 15, 16> = MatchPattern::new(0, &spaces[..]);
         assert!(pattern.iter().next().is_none());
     }
 
     #[test]
     fn new_pattern_filled_set_works() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn new_pattern_not_at_origin_set_moved_horizontally() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(4, 1));
         spaces.push(Pos::new(5, 0));
         spaces.push(Pos::new(9, 5));
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn new_pattern_not_at_origin_set_moved_vertically() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 6));
         spaces.push(Pos::new(1, 5));
         spaces.push(Pos::new(5, 10));
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn new_pattern_not_at_origin_set_moved_horizontally_vertically() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(4, 6));
         spaces.push(Pos::new(5, 5));
         spaces.push(Pos::new(9, 10));
@@ -223,10 +223,10 @@ mod tests {
 
     #[test]
     fn new_pattern_at_large_val_set_moved_horizontally_vertically() {
-        let mut spaces = Vec::new();
-        spaces.push(Pos::new(usize::MAX, usize::MAX));
-        spaces.push(Pos::new(usize::MAX, usize::MAX - 1));
-        spaces.push(Pos::new(usize::MAX - 1, usize::MAX));
+        let mut spaces: Vec<Pos<{ usize::MAX }, { usize::MAX }>> = Vec::new();
+        spaces.push(Pos::new(usize::MAX - 1, usize::MAX - 1));
+        spaces.push(Pos::new(usize::MAX - 1, usize::MAX - 2));
+        spaces.push(Pos::new(usize::MAX - 2, usize::MAX - 1));
 
         let pattern = MatchPattern::new(0, &spaces[..]);
 
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn new_pattern_created_with_type_has_type() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn new_match_created_with_pattern_has_pattern() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn new_match_created_with_changed_pos_has_changed_pos() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn new_match_created_with_board_pos_has_board_pos() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn new_close_match_created_with_pattern_has_pattern() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn new_close_match_created_with_missing_pos_has_missing_pos() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn new_close_match_created_with_board_pos_has_board_pos() {
-        let mut spaces = Vec::new();
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
         spaces.push(Pos::new(0, 1));
         spaces.push(Pos::new(1, 0));
         spaces.push(Pos::new(5, 5));

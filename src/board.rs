@@ -57,15 +57,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Arguments
     ///
     /// * `pos` - the position of the piece whose type to find
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided position is outside the board.
-    pub fn piece(&self, pos: Pos) -> P {
-        if !self.is_in_bounds(pos) {
-            panic!("Tried to access piece outside board: {}", pos);
-        }
-
+    pub fn piece(&self, pos: Pos<W, H>) -> P {
         self.pieces[pos.x()][pos.y()]
     }
 
@@ -75,15 +67,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `pos` - the position of the piece to replace
     /// * `piece` - the piece to put at the given position
-    ///
-    /// # Panics
-    ///
-    /// Panics if the provided position is outside the board.
-    pub fn set_piece(&mut self, pos: Pos, piece: P) -> P {
-        if !self.is_in_bounds(pos) {
-            panic!("Tried to set piece out of bounds: {}", pos);
-        }
-
+    pub fn set_piece(&mut self, pos: Pos<W, H>, piece: P) -> P {
         let old_piece = self.pieces[pos.x()][pos.y()];
         self.pieces[pos.x()][pos.y()] = piece;
         old_piece
@@ -95,11 +79,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `first` - the first position of a piece to swap
     /// * `second` - the second position of a piece to swap
-    ///
-    /// # Panics
-    ///
-    /// Panics if either position is outside the board.
-    pub fn swap(&mut self, first: Pos, second: Pos) {
+    pub fn swap(&mut self, first: Pos<W, H>, second: Pos<W, H>) {
         let old_first = self.set_piece(first, self.piece(second));
         self.set_piece(second, old_first);
     }
@@ -129,9 +109,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
 
         for y in (1..=H).rev() {
             let is_pos_below_filled = column[y - 1] != P::AIR;
-            let pos = Pos::new(x, y);
-            let has_barrier_below = self.is_in_bounds(pos)
-                && self.has_barrier_between(pos, Pos::new(x, y - 1));
+            let pos = Pos::try_new(x, y);
+            let has_barrier_below = pos.map(|p| self.has_barrier_between(p, Pos::new(x, y - 1)))
+                .unwrap_or(false);
 
             if is_pos_below_filled || has_barrier_below {
                 return match y == H {
@@ -167,6 +147,12 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         let mut air_ys = VecDeque::new();
         let mut moves = Vec::new();
 
+        if H == 0 {
+            return moves;
+        }
+
+        let horizontal_offset = Pos::new(0, 1);
+
         for y in 0..H {
             let pos = Pos::new(x, y);
 
@@ -178,8 +164,10 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                 air_ys.push_back(y);
             }
 
-            let pos_above = Pos::new(x, y + 1);
-            if self.is_in_bounds(pos_above) && self.has_barrier_between(pos, pos_above) {
+            let has_barrier_above = (pos + horizontal_offset)
+                .map(|p| self.has_barrier_between(pos, p))
+                .unwrap_or(false);
+            if has_barrier_above {
                 air_ys.clear();
             }
         }
@@ -191,14 +179,14 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// that were made to move the pieces, which is useful for producing an animation of the pieces
     /// falling. For example, if the resultant vector contains ((2, 3), (2, 4)), then (2, 3) and
     /// (2, 4) were swapped. The swaps are in the order in which they were applied to the board.
-    pub fn apply_gravity_to_board(&mut self) -> Vec<(Pos, Pos)> {
+    pub fn apply_gravity_to_board(&mut self) -> Vec<(Pos<W, H>, Pos<W, H>)> {
         let mut moves = Vec::new();
 
         let mut air_by_row = self.scan_row_air();
         let mut air_by_col = self.scan_col_air();
 
         // Initially, fill the queue with every position on the board
-        let mut pos_to_update: VecDeque<Pos> = (0..H)
+        let mut pos_to_update: VecDeque<Pos<W, H>> = (0..H)
             .flat_map(|y| (0..W).map(move |x| Pos::new(x, y)))
             .collect();
 
@@ -288,7 +276,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Arguments
     ///
     /// * `pos` - the position to check
-    pub fn is_in_bounds(&self, pos: Pos) -> bool {
+    pub fn is_in_bounds(&self, pos: Pos<W, H>) -> bool {
         pos.x() < W && pos.y() < H
     }
 
@@ -302,11 +290,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Panics
     ///
     /// Panics if the two positions are not vertically or horizontally adjacent.
-    pub fn has_barrier_between(&self, first: Pos, second: Pos) -> bool {
-        if !self.is_in_bounds(first) || !self.is_in_bounds(second) {
-            panic!("Tried to check barrier with piece out of bounds: {} and {}", first, second);
-        }
-
+    pub fn has_barrier_between(&self, first: Pos<W, H>, second: Pos<W, H>) -> bool {
         if BoardState::<P, W, H>::vertically_adjacent(first, second) {
             let x = first.x();
             let barrier_index = BoardState::<P, W, H>::horizontal_barrier_index(first, second);
@@ -332,11 +316,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// # Panics
     ///
     /// Panics if the two positions are not vertically or horizontally adjacent.
-    pub fn set_barrier_between(&mut self, first: Pos, second: Pos, has_barrier: bool) {
-        if !self.is_in_bounds(first) || !self.is_in_bounds(second) {
-            panic!("Tried to set barrier with piece out of bounds: {} and {}", first, second);
-        }
-
+    pub fn set_barrier_between(&mut self, first: Pos<W, H>, second: Pos<W, H>, has_barrier: bool) {
         if BoardState::<P, W, H>::vertically_adjacent(first, second) {
             let x = first.x();
             let barrier_index = BoardState::<P, W, H>::horizontal_barrier_index(first, second);
@@ -357,7 +337,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `first` - first position to compare
     /// * `second` - second position to compare
-    fn horizontally_adjacent(first: Pos, second: Pos) -> bool {
+    fn horizontally_adjacent(first: Pos<W, H>, second: Pos<W, H>) -> bool {
         usize::abs_diff(first.x(), second.x()) == 1
             && usize::abs_diff(first.y(), second.y()) == 0
     }
@@ -368,7 +348,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `first` - first position to compare
     /// * `second` - second position to compare
-    fn vertically_adjacent(first: Pos, second: Pos) -> bool {
+    fn vertically_adjacent(first: Pos<W, H>, second: Pos<W, H>) -> bool {
         usize::abs_diff(first.x(), second.x()) == 0
             && usize::abs_diff(first.y(), second.y()) == 1
     }
@@ -380,7 +360,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `first` - first position that the barrier exists between
     /// * `second` - second position that the barrier exists between
-    fn horizontal_barrier_index(first: Pos, second: Pos) -> usize {
+    fn horizontal_barrier_index(first: Pos<W, H>, second: Pos<W, H>) -> usize {
         first.y().min(second.y())
     }
 
@@ -391,11 +371,11 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `first` - first position that the barrier exists between
     /// * `second` - second position that the barrier exists between
-    fn vertical_barrier_index(first: Pos, second: Pos) -> usize {
+    fn vertical_barrier_index(first: Pos<W, H>, second: Pos<W, H>) -> usize {
         first.x().min(second.x())
     }
 
-    /// Scans the whole board to find air intervals for each column..
+    /// Scans the whole board to find air intervals for each column.
     fn scan_row_air(&self) -> [Vec<RowAirInterval>; H] {
         let mut intervals: [Vec<RowAirInterval>; H] = from_fn(|_| Vec::new());
 
@@ -409,7 +389,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                 }
 
                 let pos = Pos::new(x, y);
-                let barrier_right = x < W - 1 && self.has_barrier_between(pos, pos + Pos::new(1, 0));
+                let right_pos = pos + Pos::new(1, 0);
+                let barrier_right = right_pos.map(|p| self.has_barrier_between(pos, p))
+                    .unwrap_or(false);
 
                 // End an interval at a barrier or at the top of the board
                 if barrier_right || x == W - 1 {
@@ -445,7 +427,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
                 }
 
                 let pos = Pos::new(x, y);
-                let barrier_above = y < H - 1 && self.has_barrier_between(pos, pos + Pos::new(0, 1));
+                let pos_above = pos + Pos::new(0, 1);
+                let barrier_above = pos_above.map(|p| self.has_barrier_between(pos, p))
+                    .unwrap_or(false);
 
                 // End an interval at a barrier or at the top of the board
                 if barrier_above || y == H - 1 {
@@ -552,7 +536,7 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     /// * `y` - index of the row to rotate
     /// * `start_x` - x-coordinate of the piece that will move to `end_x`
     /// * `end_x` - destination of the piece at `start_x` after the rotation
-    fn rotate_row(&mut self, y: usize, start_x: usize, end_x: usize) -> Vec<(Pos, Pos)> {
+    fn rotate_row(&mut self, y: usize, start_x: usize, end_x: usize) -> Vec<(Pos<W, H>, Pos<W, H>)> {
         let mut moves = Vec::new();
 
         match start_x <= end_x {
@@ -643,7 +627,7 @@ mod tests {
         const AIR: Self = Self::Air;
     }
 
-    fn moves_produce_board<const W: usize, const H: usize>(moves: &Vec<(Pos, Pos)>,
+    fn moves_produce_board<const W: usize, const H: usize>(moves: &Vec<(Pos<W, H>, Pos<W, H>)>,
                                                            start: &mut BoardState<TestPiece, W, H>,
                                                            end: &BoardState<TestPiece, W, H>) -> bool {
         for (first, second) in moves {
@@ -675,20 +659,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn get_piece_out_of_bounds_x_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.piece(Pos::new(15, 15));
-    }
-
-    #[test]
-    #[should_panic]
-    fn get_piece_out_of_bounds_y_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.piece(Pos::new(14, 16));
-    }
-
-    #[test]
     fn swap_adjacent_swapped() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         let piece1 = TestPiece::First;
@@ -714,50 +684,6 @@ mod tests {
         board.swap(Pos::new(1, 2), Pos::new(14, 15));
         assert_eq!(piece2, board.piece(Pos::new(1, 2)));
         assert_eq!(piece1, board.piece(Pos::new(14, 15)));
-    }
-
-    #[test]
-    #[should_panic]
-    fn swap_first_pos_outside_board_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(1, 2), piece1);
-
-        board.swap(Pos::new(15, 15), Pos::new(1, 2));
-    }
-
-    #[test]
-    #[should_panic]
-    fn swap_first_pos_very_large_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(1, 2), piece1);
-
-        board.swap(Pos::new(usize::MAX, usize::MAX), Pos::new(1, 2));
-    }
-
-    #[test]
-    #[should_panic]
-    fn swap_second_pos_outside_board_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(1, 2), piece1);
-
-        board.swap(Pos::new(1, 2), Pos::new(14, 16));
-    }
-
-    #[test]
-    #[should_panic]
-    fn swap_second_pos_very_large_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(1, 2), piece1);
-
-        board.swap(Pos::new(1, 2), Pos::new(usize::MAX, usize::MAX));
     }
 
     #[test]
@@ -799,33 +725,6 @@ mod tests {
         assert_eq!(TestPiece::default(), board.set_piece(Pos::new(1, 2), piece1));
         assert_eq!(piece1, board.set_piece(Pos::new(1, 2), piece1));
         assert_eq!(piece1, board.piece(Pos::new(1, 2)));
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_piece_out_of_bounds_x_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(15, 15), piece1);
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_piece_out_of_bounds_y_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(14, 16), piece1);
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_piece_very_large_pos_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        let piece1 = TestPiece::First;
-
-        board.set_piece(Pos::new(usize::MAX, usize::MAX), piece1);
     }
 
     #[test]
@@ -891,34 +790,6 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn set_barrier_first_pos_out_of_bounds_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(14, 16), Pos::new(14, 15), true);
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_barrier_second_pos_out_of_bounds_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(14, 15), Pos::new(14, 16), true);
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_barrier_first_pos_very_large_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(usize::MAX, usize::MAX), Pos::new(14, 15), true);
-    }
-
-    #[test]
-    #[should_panic]
-    fn set_barrier_second_pos_very_large_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(14, 15), Pos::new(usize::MAX, usize::MAX), true);
-    }
-
-    #[test]
-    #[should_panic]
     fn set_barrier_horizontally_separated_panics() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_barrier_between(Pos::new(1, 2), Pos::new(3, 2), true);
@@ -936,34 +807,6 @@ mod tests {
     fn set_barrier_diagonally_adjacent_panics() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_barrier_between(Pos::new(1, 2), Pos::new(2, 3), true);
-    }
-
-    #[test]
-    #[should_panic]
-    fn has_barrier_first_pos_out_of_bounds_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(14, 16), Pos::new(14, 15));
-    }
-
-    #[test]
-    #[should_panic]
-    fn has_barrier_second_pos_out_of_bounds_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(14, 15), Pos::new(14, 16));
-    }
-
-    #[test]
-    #[should_panic]
-    fn has_barrier_first_pos_very_large_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(usize::MAX, usize::MAX), Pos::new(14, 15));
-    }
-
-    #[test]
-    #[should_panic]
-    fn has_barrier_second_pos_very_large_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(14, 15), Pos::new(usize::MAX, usize::MAX));
     }
 
     #[test]

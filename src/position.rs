@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
+/// Defines errors possible from [`Col`] methods.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ColError {
     OutOfBounds(usize)
@@ -50,6 +51,7 @@ impl<const W: usize> Col<W> {
 
 }
 
+/// Defines errors possible from [`Pos`] methods.
 #[derive(Debug, PartialEq, Eq)]
 pub enum PosError {
     OutOfBounds(usize, usize),

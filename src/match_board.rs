@@ -133,7 +133,6 @@ impl<M: Copy, P: Piece<MatchType=M>, const W: usize, const H: usize> MatchBoard<
         pos.x() < W && pos.y() < H
     }
 
-
     /// Scans the initial state of the board for matches and close matches.
     fn add_initial_matches(&mut self) {
         for x in 0..W {

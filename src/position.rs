@@ -2,6 +2,55 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, Sub};
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum ColError {
+    OutOfBounds(usize)
+}
+
+/// Represents a column in a two-dimensional plane.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Col<const BOARD_WIDTH: usize> {
+
+    /// The index of the column
+    pub x: usize
+
+}
+
+impl<const W: usize> Col<W> {
+    /// Creates a new position with a horizontal and vertical component.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - the horizontal component of the position
+    ///
+    /// # Panics
+    ///
+    /// Panics if the given coordinates are outside the board.
+    pub fn new(x: usize) -> Col<W> {
+        if x >= W {
+            panic!("Tried to create column outside board: ({x})");
+        }
+
+        Col { x }
+    }
+
+    /// Attempts to create a new column, returning an error if the column is
+    /// outside the board's bounds.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - the index of the column
+    pub fn try_new(x: usize) -> Result<Col<W>, ColError> {
+        if x >= W {
+            return Err(ColError::OutOfBounds(x));
+        }
+
+        Ok(Col { x })
+    }
+
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum PosError {
     OutOfBounds(usize, usize),
     Overflow
@@ -115,62 +164,96 @@ impl<const MX: usize, const MY: usize> Display for Pos<MX, MY> {
 
 #[cfg(test)]
 mod tests {
-    use crate::PosError;
+    use crate::{Col, ColError, PosError};
     use crate::position::Pos;
 
     #[test]
     #[should_panic]
-    fn new_x_out_of_bounds() {
+    fn col_new_x_out_of_bounds() {
+        Col::<15>::new(15);
+    }
+
+    #[test]
+    #[should_panic]
+    fn col_new_large_x_out_of_bounds() {
+        Col::<15>::new(usize::MAX);
+    }
+
+    #[test]
+    fn col_new_positive_component_allowed() {
+        let col: Col<15> = Col::new(1);
+        assert_eq!(1, col.x);
+    }
+
+    #[test]
+    fn col_try_new_x_out_of_bounds() {
+        assert_eq!(Col::<15>::try_new(15), Err(ColError::OutOfBounds(15)));
+    }
+
+    #[test]
+    fn col_try_new_large_x_out_of_bounds() {
+        assert_eq!(Col::<15>::try_new(usize::MAX), Err(ColError::OutOfBounds(usize::MAX)));
+    }
+
+    #[test]
+    fn col_try_new_positive_components_allowed() {
+        let col: Col<15> = Col::try_new(1).unwrap();
+        assert_eq!(1, col.x);
+    }
+
+    #[test]
+    #[should_panic]
+    fn pos_new_x_out_of_bounds() {
         Pos::<15, 16>::new(15, 4);
     }
 
     #[test]
     #[should_panic]
-    fn new_y_out_of_bounds() {
+    fn pos_new_y_out_of_bounds() {
         Pos::<15, 16>::new(1, 16);
     }
 
     #[test]
     #[should_panic]
-    fn new_large_x_out_of_bounds() {
+    fn pos_new_large_x_out_of_bounds() {
         Pos::<15, 16>::new(usize::MAX, 4);
     }
 
     #[test]
     #[should_panic]
-    fn new_large_y_out_of_bounds() {
+    fn pos_new_large_y_out_of_bounds() {
         Pos::<15, 16>::new(1, usize::MAX);
     }
 
     #[test]
-    fn new_positive_components_allowed() {
+    fn pos_new_positive_components_allowed() {
         let pos: Pos<15, 16> = Pos::new(1, 4);
         assert_eq!(1, pos.x());
         assert_eq!(4, pos.y());
     }
 
     #[test]
-    fn try_new_x_out_of_bounds() {
+    fn pos_try_new_x_out_of_bounds() {
         assert_eq!(Pos::<15, 16>::try_new(15, 4), Err(PosError::OutOfBounds(15, 4)));
     }
 
     #[test]
-    fn try_new_y_out_of_bounds() {
+    fn pos_try_new_y_out_of_bounds() {
         assert_eq!(Pos::<15, 16>::try_new(1, 16), Err(PosError::OutOfBounds(1, 16)));
     }
 
     #[test]
-    fn try_new_large_x_out_of_bounds() {
+    fn pos_try_new_large_x_out_of_bounds() {
         assert_eq!(Pos::<15, 16>::try_new(usize::MAX, 4), Err(PosError::OutOfBounds(usize::MAX, 4)));
     }
 
     #[test]
-    fn try_new_large_y_out_of_bounds() {
+    fn pos_try_new_large_y_out_of_bounds() {
         assert_eq!(Pos::<15, 16>::try_new(1, usize::MAX), Err(PosError::OutOfBounds(1, usize::MAX)));
     }
 
     #[test]
-    fn try_new_positive_components_allowed() {
+    fn pos_try_new_positive_components_allowed() {
         let pos: Pos<15, 16> = Pos::try_new(1, 4).unwrap();
         assert_eq!(1, pos.x());
         assert_eq!(4, pos.y());

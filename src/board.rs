@@ -1,7 +1,7 @@
 use std::array::from_fn;
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::collections::{BTreeSet, VecDeque};
-use crate::position::Pos;
+use crate::position::{Col, Pos};
 
 use std::ops::BitAnd;
 
@@ -95,20 +95,13 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// # Arguments
     ///
-    /// `x` - x-coordinate of the column to find the surface of
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given column does not exist.
-    pub fn surface(&self, x: usize) -> Option<usize> {
-        if x >= W {
-            panic!("Column index {} is not within the board", x);
-        }
-
-        let column = &self.pieces[x];
+    /// `col` - column to find the surface of
+    pub fn surface(&self, col: Col<W>) -> Option<usize> {
+        let x = col.x;
+        let col_pieces = &self.pieces[x];
 
         for y in (1..=H).rev() {
-            let is_pos_below_filled = column[y - 1] != P::AIR;
+            let is_pos_below_filled = col_pieces[y - 1] != P::AIR;
             let pos = Pos::try_new(x, y);
             let has_barrier_below = pos.map(|p| self.has_barrier_between(p, Pos::new(x, y - 1)))
                 .unwrap_or(false);
@@ -134,15 +127,9 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// # Arguments
     ///
-    /// `x` - x-coordinate of the column to apply gravity to
-    ///
-    /// # Panics
-    ///
-    /// Panics if the given column does not exist.
-    pub fn apply_gravity_to_column(&mut self, x: usize) -> Vec<(usize, usize)> {
-        if x >= W {
-            panic!("Column index {} is not within the board", x);
-        }
+    /// `col` - column to apply gravity to
+    pub fn apply_gravity_to_column(&mut self, col: Col<W>) -> Vec<(usize, usize)> {
+        let x = col.x;
 
         let mut air_ys = VecDeque::new();
         let mut moves = Vec::new();
@@ -589,7 +576,7 @@ struct ColAirInterval {
 mod tests {
     use std::collections::HashSet;
     use std::ops::BitAnd;
-    use crate::{BoardState, Piece, Pos};
+    use crate::{BoardState, Col, Piece, Pos};
 
     #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
     enum TestPiece {
@@ -833,13 +820,13 @@ mod tests {
     #[test]
     fn surface_zero_height_none() {
         let board: BoardState<TestPiece, 15, 0> = BoardState::new();
-        assert!(board.surface(1).is_none());
+        assert!(board.surface(Col::new(1)).is_none());
     }
 
     #[test]
     fn surface_all_air_zero() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        assert_eq!(0, board.surface(1).unwrap());
+        assert_eq!(0, board.surface(Col::new(1)).unwrap());
     }
 
     #[test]
@@ -851,7 +838,7 @@ mod tests {
             board.set_piece(Pos::new(x, y), TestPiece::First);
         }
 
-        assert!(board.surface(x).is_none());
+        assert!(board.surface(Col::new(x)).is_none());
     }
 
     #[test]
@@ -863,7 +850,7 @@ mod tests {
             board.set_piece(Pos::new(x, y), TestPiece::First);
         }
 
-        assert!(board.surface(x).is_none());
+        assert!(board.surface(Col::new(x)).is_none());
     }
 
     #[test]
@@ -877,7 +864,7 @@ mod tests {
 
         board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true);
 
-        assert_eq!(6, board.surface(x).unwrap());
+        assert_eq!(6, board.surface(Col::new(x)).unwrap());
     }
 
     #[test]
@@ -892,33 +879,19 @@ mod tests {
         board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true);
         board.set_barrier_between(Pos::new(x, 6), Pos::new(x, 7), true);
 
-        assert_eq!(7, board.surface(x).unwrap());
-    }
-
-    #[test]
-    #[should_panic]
-    fn surface_column_index_out_of_bounds_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.surface(15);
-    }
-
-    #[test]
-    #[should_panic]
-    fn surface_column_index_very_large_panics() {
-        let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.surface(usize::MAX);
+        assert_eq!(7, board.surface(Col::new(x)).unwrap());
     }
 
     #[test]
     fn column_gravity_zero_height_no_exception() {
         let mut board: BoardState<TestPiece, 15, 0> = BoardState::new();
-        assert!(board.apply_gravity_to_column(1).is_empty());
+        assert!(board.apply_gravity_to_column(Col::new(1)).is_empty());
     }
 
     #[test]
     fn column_gravity_all_air_unchanged() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        assert!(board.apply_gravity_to_column(1).is_empty());
+        assert!(board.apply_gravity_to_column(Col::new(1)).is_empty());
         for y in 0..16 {
             assert_eq!(TestPiece::Air, board.piece(Pos::new(1, y)));
         }
@@ -933,7 +906,7 @@ mod tests {
             board.set_piece(Pos::new(x, y), TestPiece::First);
         }
 
-        assert!(board.apply_gravity_to_column(1).is_empty());
+        assert!(board.apply_gravity_to_column(Col::new(1)).is_empty());
         for y in 0..8 {
             assert_eq!(TestPiece::First, board.piece(Pos::new(1, y)));
         }
@@ -951,7 +924,7 @@ mod tests {
 
         board.set_barrier_between(Pos::new(x, 3), Pos::new(x, 4), true);
 
-        assert_eq!(vec![(2, 1), (5, 4), (7, 5)], board.apply_gravity_to_column(1));
+        assert_eq!(vec![(2, 1), (5, 4), (7, 5)], board.apply_gravity_to_column(Col::new(1)));
 
         assert_eq!(TestPiece::First, board.piece(Pos::new(x, 0)));
         assert_eq!(TestPiece::Second, board.piece(Pos::new(x, 1)));
@@ -961,20 +934,6 @@ mod tests {
         assert_eq!(TestPiece::First, board.piece(Pos::new(x, 5)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(x, 6)));
         assert_eq!(TestPiece::Air, board.piece(Pos::new(x, 7)));
-    }
-
-    #[test]
-    #[should_panic]
-    fn column_gravity_column_index_out_of_bounds_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.apply_gravity_to_column(15);
-    }
-
-    #[test]
-    #[should_panic]
-    fn column_gravity_column_index_very_large_panics() {
-        let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.apply_gravity_to_column(usize::MAX);
     }
 
     #[test]

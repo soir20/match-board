@@ -4,6 +4,7 @@ use std::collections::{BTreeSet, VecDeque};
 use crate::position::{Col, Pos};
 
 use std::ops::BitAnd;
+use crate::BoardError::NonAdjacent;
 
 /// A piece with one or more match types. Two pieces should be equal when they match the same
 /// match types.
@@ -15,6 +16,12 @@ pub trait Piece: Copy + From<Self::MatchType> + Default + BitAnd<Output=Self> + 
     /// A piece that matches no match types and is treated as empty.
     const AIR: Self;
 
+}
+
+/// Defines errors possible from [`Board`] methods.
+#[derive(Debug, PartialEq, Eq)]
+pub enum BoardError<const BOARD_WIDTH: usize, const BOARD_HEIGHT: usize> {
+    NonAdjacent(Pos<BOARD_WIDTH, BOARD_HEIGHT>, Pos<BOARD_WIDTH, BOARD_HEIGHT>)
 }
 
 /// Contains zero or many pieces and represents the current state
@@ -273,10 +280,6 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
     ///
     /// * `first` - first position to check whether there is a barrier between
     /// * `second` - second position to check whether there is a barrier between
-    ///
-    /// # Panics
-    ///
-    /// Panics if the two positions are not vertically or horizontally adjacent.
     pub fn has_barrier_between(&self, first: Pos<W, H>, second: Pos<W, H>) -> bool {
         if BoardState::<P, W, H>::vertically_adjacent(first, second) {
             let x = first.x();
@@ -288,34 +291,32 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
             return self.vertical_barriers[y][barrier_index]
         }
 
-        panic!("Barriers only exist between adjacent positions, but {} and {} were provided",
-               first, second)
+        false
     }
 
-    /// Sets whether there is a barrier between two positions.
+    /// Sets whether there is a barrier between two positions. The positions must be directly
+    /// adjacent in the vertical or the horizontal direction. There cannot be barriers between
+    /// diagonally adjacent positions.
     ///
     /// # Arguments
     ///
     /// * `first` - first position to set a barrier between
     /// * `second` - second position to set a barrier between
     /// * `has_barrier` - whether there should be a barrier between the two positions
-    ///
-    /// # Panics
-    ///
-    /// Panics if the two positions are not vertically or horizontally adjacent.
-    pub fn set_barrier_between(&mut self, first: Pos<W, H>, second: Pos<W, H>, has_barrier: bool) {
+    pub fn set_barrier_between(&mut self, first: Pos<W, H>, second: Pos<W, H>, has_barrier: bool) -> Result<(), BoardError<W, H>> {
         if BoardState::<P, W, H>::vertically_adjacent(first, second) {
             let x = first.x();
             let barrier_index = BoardState::<P, W, H>::horizontal_barrier_index(first, second);
-            self.horizontal_barriers[x][barrier_index] = has_barrier
+            self.horizontal_barriers[x][barrier_index] = has_barrier;
+            return Ok(());
         } else if BoardState::<P, W, H>::horizontally_adjacent(first, second) {
             let y = first.y();
             let barrier_index = BoardState::<P, W, H>::vertical_barrier_index(first, second);
-            self.vertical_barriers[y][barrier_index] = has_barrier
-        } else {
-            panic!("Barriers only exist between adjacent positions, but {} and {} were provided",
-                   first, second)
+            self.vertical_barriers[y][barrier_index] = has_barrier;
+            return Ok(());
         }
+        
+        Err(NonAdjacent(first, second))
     }
 
     /// Checks if two positions are horizontally adjacent.
@@ -730,13 +731,13 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         for x in 0..14 {
             for y in 0..15 {
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true).unwrap();
                 assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false).unwrap();
 
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true).unwrap();
                 assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false).unwrap();
             }
         }
     }
@@ -746,15 +747,15 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         for x in 0..14 {
             for y in 0..15 {
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true).unwrap();
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true).unwrap();
                 assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false).unwrap();
 
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true).unwrap();
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true).unwrap();
                 assert!(board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false).unwrap();
             }
         }
     }
@@ -764,57 +765,51 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         for x in 0..14 {
             for y in 0..15 {
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true);
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), true).unwrap();
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x, y + 1), false).unwrap();
                 assert!(!board.has_barrier_between(Pos::new(x, y), Pos::new(x, y + 1)));
 
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true);
-                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false);
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), true).unwrap();
+                board.set_barrier_between(Pos::new(x, y), Pos::new(x + 1, y), false).unwrap();
                 assert!(!board.has_barrier_between(Pos::new(x, y), Pos::new(x + 1, y)));
             }
         }
     }
 
     #[test]
-    #[should_panic]
-    fn set_barrier_horizontally_separated_panics() {
+    fn set_barrier_horizontally_separated_err() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(1, 2), Pos::new(3, 2), true);
+        assert!(board.set_barrier_between(Pos::new(1, 2), Pos::new(3, 2), true).is_err());
     }
 
     #[test]
-    #[should_panic]
-    fn set_barrier_vertically_separated_panics() {
+    fn set_barrier_vertically_separated_err() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 4), true);
+        assert!(board.set_barrier_between(Pos::new(1, 2), Pos::new(1, 4), true).is_err());
     }
 
     #[test]
-    #[should_panic]
     fn set_barrier_diagonally_adjacent_panics() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.set_barrier_between(Pos::new(1, 2), Pos::new(2, 3), true);
+        assert!(board.set_barrier_between(Pos::new(1, 2), Pos::new(2, 3), true).is_err());
     }
 
     #[test]
-    #[should_panic]
-    fn has_barrier_horizontally_separated_panics() {
+    fn has_barrier_horizontally_separated_false() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(1, 2), Pos::new(3, 2));
+        assert!(!board.has_barrier_between(Pos::new(1, 2), Pos::new(3, 2)));
     }
 
     #[test]
-    #[should_panic]
-    fn has_barrier_vertically_separated_panics() {
+    fn has_barrier_vertically_separated_false() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(1, 2), Pos::new(1, 4));
+        assert!(!board.has_barrier_between(Pos::new(1, 2), Pos::new(1, 4)));
     }
 
     #[test]
-    #[should_panic]
-    fn has_barrier_diagonally_adjacent_panics() {
+    fn has_barrier_diagonally_adjacent_false() {
         let board: BoardState<TestPiece, 15, 16> = BoardState::new();
-        board.has_barrier_between(Pos::new(1, 2), Pos::new(2, 3));
+        assert!(!board.has_barrier_between(Pos::new(1, 2), Pos::new(2, 3)));
     }
 
     #[test]
@@ -862,7 +857,7 @@ mod tests {
         board.set_piece(Pos::new(x, 2), TestPiece::Second);
         board.set_piece(Pos::new(x, 5), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true);
+        board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true).unwrap();
 
         assert_eq!(6, board.surface(Col::new(x)).unwrap());
     }
@@ -876,8 +871,8 @@ mod tests {
         board.set_piece(Pos::new(x, 2), TestPiece::Second);
         board.set_piece(Pos::new(x, 5), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true);
-        board.set_barrier_between(Pos::new(x, 6), Pos::new(x, 7), true);
+        board.set_barrier_between(Pos::new(x, 2), Pos::new(x, 3), true).unwrap();
+        board.set_barrier_between(Pos::new(x, 6), Pos::new(x, 7), true).unwrap();
 
         assert_eq!(7, board.surface(Col::new(x)).unwrap());
     }
@@ -922,7 +917,7 @@ mod tests {
         board.set_piece(Pos::new(x, 5), TestPiece::First);
         board.set_piece(Pos::new(x, 7), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(x, 3), Pos::new(x, 4), true);
+        board.set_barrier_between(Pos::new(x, 3), Pos::new(x, 4), true).unwrap();
 
         assert_eq!(vec![(2, 1), (5, 4), (7, 5)], board.apply_gravity_to_column(Col::new(1)));
 
@@ -954,7 +949,7 @@ mod tests {
     fn board_gravity_drop_onto_barrier() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 15), TestPiece::First);
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -971,7 +966,7 @@ mod tests {
     fn board_gravity_piece_at_bottom_stays_put() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 0), TestPiece::First);
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -988,7 +983,7 @@ mod tests {
     fn board_gravity_piece_on_barrier_stays_put() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 6), TestPiece::First);
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1006,7 +1001,7 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(1, 15), TestPiece::First);
         board.set_piece(Pos::new(1, 14), TestPiece::Second);
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1027,7 +1022,7 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 15), TestPiece::First);
         board.set_piece(Pos::new(0, 14), TestPiece::Second);
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1048,8 +1043,8 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 15), TestPiece::First);
         board.set_piece(Pos::new(0, 14), TestPiece::Second);
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1070,8 +1065,8 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(1, 15), TestPiece::First);
         board.set_piece(Pos::new(1, 14), TestPiece::Second);
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1107,20 +1102,20 @@ mod tests {
         board.set_piece(Pos::new(12, 10), TestPiece::Second);
         board.set_piece(Pos::new(13, 6), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true);
-        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true);
-        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true);
-        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true);
-        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
-        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
-        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true);
-        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true);
-        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true);
-        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
-        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1172,20 +1167,20 @@ mod tests {
         board.set_piece(Pos::new(13, 10), TestPiece::Second);
         board.set_piece(Pos::new(14, 6), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true);
-        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true);
-        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true);
-        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true);
-        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
-        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
-        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true);
-        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true);
-        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true);
-        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
-        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
-        board.set_barrier_between(Pos::new(14, 5), Pos::new(14, 6), true);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(14, 5), Pos::new(14, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1238,21 +1233,21 @@ mod tests {
         board.set_piece(Pos::new(13, 10), TestPiece::Second);
         board.set_piece(Pos::new(14, 6), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true);
-        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true);
-        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true);
-        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true);
-        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
-        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
-        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true);
-        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true);
-        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true);
-        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true);
-        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true);
-        board.set_barrier_between(Pos::new(14, 5), Pos::new(14, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(2, 5), Pos::new(2, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(9, 5), Pos::new(9, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(10, 5), Pos::new(10, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(11, 5), Pos::new(11, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(12, 5), Pos::new(12, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(13, 5), Pos::new(13, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(14, 5), Pos::new(14, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1298,14 +1293,14 @@ mod tests {
         board.set_piece(Pos::new(7, 6), TestPiece::Second);
         board.set_piece(Pos::new(8, 6), TestPiece::Second);
 
-        board.set_barrier_between(Pos::new(2, 6), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true);
-        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true);
-        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true);
-        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
-        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
-        board.set_barrier_between(Pos::new(8, 6), Pos::new(9, 6), true);
+        board.set_barrier_between(Pos::new(2, 6), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 6), Pos::new(9, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1335,7 +1330,7 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(1, 7), TestPiece::First);
         board.set_piece(Pos::new(1, 6), TestPiece::Second);
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1356,7 +1351,7 @@ mod tests {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
         board.set_piece(Pos::new(0, 7), TestPiece::First);
         board.set_piece(Pos::new(0, 6), TestPiece::Second);
-        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true);
+        board.set_barrier_between(Pos::new(0, 5), Pos::new(0, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1381,14 +1376,14 @@ mod tests {
         board.set_piece(Pos::new(5, 8), TestPiece::First);
         board.set_piece(Pos::new(6, 10), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(2, 6), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true);
-        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true);
-        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true);
-        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true);
-        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true);
-        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true);
-        board.set_barrier_between(Pos::new(8, 6), Pos::new(9, 6), true);
+        board.set_barrier_between(Pos::new(2, 6), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(3, 5), Pos::new(3, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 5), Pos::new(4, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(5, 5), Pos::new(5, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(6, 5), Pos::new(6, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(7, 5), Pos::new(7, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 5), Pos::new(8, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 6), Pos::new(9, 6), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();
@@ -1413,13 +1408,13 @@ mod tests {
     fn board_gravity_cascade() {
         let mut board: BoardState<TestPiece, 15, 16> = BoardState::new();
 
-        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true);
-        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true);
-        board.set_barrier_between(Pos::new(2, 2), Pos::new(2, 3), true);
-        board.set_barrier_between(Pos::new(2, 8), Pos::new(2, 9), true);
-        board.set_barrier_between(Pos::new(3, 8), Pos::new(3, 9), true);
-        board.set_barrier_between(Pos::new(4, 8), Pos::new(4, 9), true);
-        board.set_barrier_between(Pos::new(4, 9), Pos::new(5, 9), true);
+        board.set_barrier_between(Pos::new(1, 5), Pos::new(1, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(0, 6), Pos::new(1, 6), true).unwrap();
+        board.set_barrier_between(Pos::new(2, 2), Pos::new(2, 3), true).unwrap();
+        board.set_barrier_between(Pos::new(2, 8), Pos::new(2, 9), true).unwrap();
+        board.set_barrier_between(Pos::new(3, 8), Pos::new(3, 9), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 8), Pos::new(4, 9), true).unwrap();
+        board.set_barrier_between(Pos::new(4, 9), Pos::new(5, 9), true).unwrap();
 
         board.set_piece(Pos::new(4, 15), TestPiece::First);
         board.set_piece(Pos::new(4, 14), TestPiece::Second);
@@ -1491,14 +1486,14 @@ mod tests {
         board.set_piece(Pos::new(7, 1), TestPiece::Second);
         board.set_piece(Pos::new(7, 0), TestPiece::First);
 
-        board.set_barrier_between(Pos::new(3, 0), Pos::new(4, 0), true);
-        board.set_barrier_between(Pos::new(10, 0), Pos::new(11, 0), true);
+        board.set_barrier_between(Pos::new(3, 0), Pos::new(4, 0), true).unwrap();
+        board.set_barrier_between(Pos::new(10, 0), Pos::new(11, 0), true).unwrap();
 
-        board.set_barrier_between(Pos::new(4, 1), Pos::new(5, 1), true);
-        board.set_barrier_between(Pos::new(9, 1), Pos::new(10, 1), true);
+        board.set_barrier_between(Pos::new(4, 1), Pos::new(5, 1), true).unwrap();
+        board.set_barrier_between(Pos::new(9, 1), Pos::new(10, 1), true).unwrap();
 
-        board.set_barrier_between(Pos::new(5, 2), Pos::new(6, 2), true);
-        board.set_barrier_between(Pos::new(8, 2), Pos::new(9, 2), true);
+        board.set_barrier_between(Pos::new(5, 2), Pos::new(6, 2), true).unwrap();
+        board.set_barrier_between(Pos::new(8, 2), Pos::new(9, 2), true).unwrap();
 
         let mut start_board = board.clone();
         let moves = board.apply_gravity_to_board();

@@ -177,6 +177,12 @@ mod tests {
 
     #[test]
     #[should_panic]
+    fn col_new_x_zero_width() {
+        Col::<0>::new(0);
+    }
+
+    #[test]
+    #[should_panic]
     fn col_new_large_x_out_of_bounds() {
         Col::<15>::new(usize::MAX);
     }
@@ -185,6 +191,11 @@ mod tests {
     fn col_new_positive_component_allowed() {
         let col: Col<15> = Col::new(1);
         assert_eq!(1, col.x);
+    }
+
+    #[test]
+    fn col_try_new_x_zero_width() {
+        assert_eq!(Col::<0>::try_new(0), Err(ColError::OutOfBounds(0)));
     }
 
     #[test]
@@ -211,8 +222,20 @@ mod tests {
 
     #[test]
     #[should_panic]
+    fn pos_new_x_zero_width() {
+        Pos::<0, 16>::new(0, 4);
+    }
+
+    #[test]
+    #[should_panic]
     fn pos_new_y_out_of_bounds() {
         Pos::<15, 16>::new(1, 16);
+    }
+
+    #[test]
+    #[should_panic]
+    fn pos_new_y_zero_height() {
+        Pos::<15, 0>::new(1, 0);
     }
 
     #[test]
@@ -240,8 +263,18 @@ mod tests {
     }
 
     #[test]
+    fn pos_try_new_x_zero_width() {
+        assert_eq!(Pos::<0, 16>::try_new(0, 4), Err(PosError::OutOfBounds(0, 4)));
+    }
+
+    #[test]
     fn pos_try_new_y_out_of_bounds() {
         assert_eq!(Pos::<15, 16>::try_new(1, 16), Err(PosError::OutOfBounds(1, 16)));
+    }
+
+    #[test]
+    fn pos_try_new_y_zero_height() {
+        assert_eq!(Pos::<15, 0>::try_new(1, 0), Err(PosError::OutOfBounds(1, 0)));
     }
 
     #[test]

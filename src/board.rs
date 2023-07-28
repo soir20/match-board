@@ -265,15 +265,6 @@ impl<P: Piece, const W: usize, const H: usize> BoardState<P, W, H> {
         moves
     }
 
-    /// Checks if a given position is inside the board.
-    ///
-    /// # Arguments
-    ///
-    /// * `pos` - the position to check
-    pub fn is_in_bounds(&self, pos: Pos<W, H>) -> bool {
-        pos.x() < W && pos.y() < H
-    }
-
     /// Checks whether there is a barrier between two positions.
     ///
     /// # Arguments

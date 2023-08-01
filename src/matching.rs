@@ -92,27 +92,30 @@ impl<M, const W: usize, const H: usize> Match<'_, M, W, H> {
 // A group of pieces where one needs to change to make a match.
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CloseMatch<'a, M, const BOARD_WIDTH: usize, const BOARD_HEIGHT: usize> {
+pub struct MatchMove<'a, M, const BOARD_WIDTH: usize, const BOARD_HEIGHT: usize> {
     pattern: &'a MatchPattern<M, BOARD_WIDTH, BOARD_HEIGHT>,
     missing_pos: Pos<BOARD_WIDTH, BOARD_HEIGHT>,
+    completing_pos: Pos<BOARD_WIDTH, BOARD_HEIGHT>,
     board_pos: HashSet<Pos<BOARD_WIDTH, BOARD_HEIGHT>>
 }
 
-impl<M, const W: usize, const H: usize> CloseMatch<'_, M, W, H> {
+impl<M, const W: usize, const H: usize> MatchMove<'_, M, W, H> {
 
-    /// Creates a new close match, a group of pieces where one piece needs to change
-    /// to make a match.
+    /// Creates a new match move, pieces that can be swapped to produce a match.
     ///
     /// # Arguments
     ///
     /// * `pattern` - the pattern of the found match
     /// * `missing_pos` - the position that needs to be changed to make a match
+    /// * `completing_pos` - the position of a piece that could be swapped with the `missing_pos`
+    ///                      to create a match
     /// * `board_pos` - actual positions on the board
-    pub(crate) fn new(pattern: &MatchPattern<M, W, H>, missing_pos: Pos<W, H>, board_pos: HashSet<Pos<W, H>>) -> CloseMatch<M, W, H> {
-        CloseMatch { pattern, missing_pos, board_pos }
+    pub(crate) fn new(pattern: &MatchPattern<M, W, H>, missing_pos: Pos<W, H>, completing_pos: Pos<W, H>,
+                      board_pos: HashSet<Pos<W, H>>) -> MatchMove<M, W, H> {
+        MatchMove { pattern, missing_pos, completing_pos, board_pos }
     }
 
-    /// Gets the pattern associated with this close match.
+    /// Gets the pattern associated with this move.
     pub fn pattern(&self) -> &MatchPattern<M, W, H> {
         self.pattern
     }
@@ -122,7 +125,16 @@ impl<M, const W: usize, const H: usize> CloseMatch<'_, M, W, H> {
         self.missing_pos
     }
 
-    /// Checks if the given position on the board is part of the close match.
+    /// Gets a piece directly adjacent to the missing positions that can be moved to create a
+    /// match. Returns the position of that piece if one is found. If multiple pieces could create a
+    /// match, the position of one of them is returned, but there is no guarantee as to which piece
+    /// will be selected.
+    pub fn completing_pos(&self) -> Pos<W, H> {
+        self.completing_pos
+    }
+
+    /// Checks if the given position on the board already contains a piece that would be part of the
+    /// match.
     ///
     /// # Arguments
     ///
@@ -142,7 +154,7 @@ impl<M, const W: usize, const H: usize> CloseMatch<'_, M, W, H> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use crate::CloseMatch;
+    use crate::MatchMove;
     use crate::matching::{MatchPattern, Match};
     use crate::position::Pos;
 
@@ -322,7 +334,7 @@ mod tests {
         board_pos.insert(Pos::new(6, 0));
         board_pos.insert(Pos::new(10, 5));
 
-        let match1 = CloseMatch::new(&pattern, Pos::new(6, 0), board_pos);
+        let match1 = MatchMove::new(&pattern, Pos::new(6, 0), Pos::new(2, 3), board_pos);
         assert_eq!(pattern, *match1.pattern());
     }
 
@@ -340,7 +352,7 @@ mod tests {
         board_pos.insert(Pos::new(6, 0));
         board_pos.insert(Pos::new(10, 5));
 
-        let match1 = CloseMatch::new(&pattern, Pos::new(6, 0), board_pos);
+        let match1 = MatchMove::new(&pattern, Pos::new(6, 0), Pos::new(2, 3), board_pos);
         assert_eq!(Pos::new(6, 0), match1.missing_pos());
     }
 
@@ -363,7 +375,25 @@ mod tests {
         expected_board_pos.insert(Pos::new(6, 0));
         expected_board_pos.insert(Pos::new(10, 5));
 
-        let match1 = CloseMatch::new(&pattern, Pos::new(6, 0), board_pos);
+        let match1 = MatchMove::new(&pattern, Pos::new(6, 0), Pos::new(2, 3), board_pos);
         assert_eq!(expected_board_pos, match1.iter().map(|&pos| pos).collect());
+    }
+
+    #[test]
+    fn new_close_match_created_with_completing_pos_has_completing_pos() {
+        let mut spaces: Vec<Pos<15, 16>> = Vec::new();
+        spaces.push(Pos::new(0, 1));
+        spaces.push(Pos::new(1, 0));
+        spaces.push(Pos::new(5, 5));
+
+        let pattern = MatchPattern::new(0, &spaces[..]);
+
+        let mut board_pos = HashSet::new();
+        board_pos.insert(Pos::new(5, 1));
+        board_pos.insert(Pos::new(6, 0));
+        board_pos.insert(Pos::new(10, 5));
+
+        let match1 = MatchMove::new(&pattern, Pos::new(6, 0), Pos::new(2, 3), board_pos);
+        assert_eq!(Pos::new(2, 3), match1.completing_pos());
     }
 }
